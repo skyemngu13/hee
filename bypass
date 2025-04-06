@@ -2,6 +2,7 @@ while true do
     if game.PlaceId == 87039211657390 then
         wait(3)
 
+        -- Mua vé vào dungeon
         local args1 = {
             [1] = {
                 [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
@@ -12,6 +13,7 @@ while true do
 
         wait(1)
 
+        -- Tạo dungeon
         local args2 = {
             [1] = {
                 [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
@@ -22,6 +24,7 @@ while true do
 
         wait(1)
 
+        -- Bắt đầu dungeon
         local args3 = {
             [1] = {
                 [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
@@ -43,45 +46,59 @@ while true do
             end
         end
 
+        local function isDoubleDungeonAppeared()
+            return string.match(dungeonInfo.Text, "Double Dungeon Appear") ~= nil
+        end
+
         local timeBeforeEnd = tick()
+
+        -- Đợi khi thời gian còn lại lớn hơn 14s
         repeat
             wait(1)
             if tick() - timeBeforeEnd > 6 then
                 local remainingTime = getRemainingTime()
-                if remainingTime and remainingTime > 20 then
-                    return
+                if remainingTime and remainingTime <= 14 then
+                    if isDoubleDungeonAppeared() then
+                        return  -- Nếu có "Double Dungeon Appear", dừng lại, không làm gì
+                    end
                 end
             end
         until string.match(dungeonInfo.Text, "^Dungeon Ends in %d+s$")
 
         wait(3)
 
-        local args1 = {
-            [1] = {
-                [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
-                [2] = "\n"
+        -- Nếu không có "Double Dungeon Appear", mua ticket và tạo dungeon mới
+        if not isDoubleDungeonAppeared() then
+            -- Mua vé vào dungeon
+            local args1 = {
+                [1] = {
+                    [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
+                    [2] = "\n"
+                }
             }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args1))
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args1))
 
-        wait(1)
+            wait(1)
 
-        local args2 = {
-            [1] = {
-                [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
-                [2] = "\n"
+            -- Tạo dungeon
+            local args2 = {
+                [1] = {
+                    [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
+                    [2] = "\n"
+                }
             }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args2))
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args2))
 
-        wait(1)
+            wait(1)
 
-        local args3 = {
-            [1] = {
-                [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
-                [2] = "\n"
+            -- Bắt đầu dungeon
+            local args3 = {
+                [1] = {
+                    [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+                    [2] = "\n"
+                }
             }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
+        end
     end
 end
