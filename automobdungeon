@@ -10,7 +10,6 @@ local enemies = workspace.__Main.__Enemies.Server
 
 local speed, tween = 1000, nil
 
--- 🔍 Tìm mob gần nhất còn sống
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
     for _, mob in pairs(enemies:GetChildren()) do
@@ -25,7 +24,6 @@ local function findNearestMob()
     return nearest
 end
 
--- 👊 Gửi remote PunchAttack
 local function punchMob(uuid)
     local args = {
         [1] = {
@@ -39,7 +37,6 @@ local function punchMob(uuid)
     ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
 end
 
--- 💥 Gửi remote EnemyDestroy 3 lần (delay 0.1s)
 local function destroyMob(uuid)
     for i = 1, 5 do
         local args = {
@@ -56,7 +53,6 @@ local function destroyMob(uuid)
     end
 end
 
--- 🔄 Gửi remote EnemyCapture (Arise) 3 lần (delay 0.1s)
 local function ariseMob(uuid)
     for i = 1, 5 do
         local args = {
@@ -73,7 +69,6 @@ local function ariseMob(uuid)
     end
 end
 
--- ✈️ Bay tới mob và tấn công sau 0.5s
 local function moveToAndPunch(mob)
     if tween then tween:Cancel() end
 
@@ -81,7 +76,6 @@ local function moveToAndPunch(mob)
     local distance = (mob.Position - rootPart.Position).Magnitude
     local tweenTime = distance / speed
 
-    -- Bắt đầu tween bay đến mob
     local finished = false
     tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
     tween.Completed:Connect(function()
@@ -89,13 +83,10 @@ local function moveToAndPunch(mob)
     end)
     tween:Play()
 
-    -- ⏳ Chờ tween hoàn tất
     while not finished do task.wait() end
 
-    -- ⏱️ Chờ thêm 0.5s sau khi bay đến mob
     task.wait(0.5)
 
-    -- 🔁 Bắt đầu đánh mob
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not mob or not mob.Parent then
@@ -107,7 +98,6 @@ local function moveToAndPunch(mob)
         if not hp or hp <= 0 then
             connection:Disconnect()
 
-            -- Kiểm tra nếu mob có Model = "JinWoo", thực hiện Arise thay vì Destroy
             if mob:GetAttribute("Model") == "JinWoo" then
                 ariseMob(uuid)
             else
@@ -118,10 +108,10 @@ local function moveToAndPunch(mob)
         end
 
         punchMob(uuid)
+        task.wait(0.5)
     end)
 end
 
--- 🔁 Vòng lặp chính
 while task.wait(0.3) do
     local mob = findNearestMob()
     if mob then
