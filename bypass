@@ -56,7 +56,7 @@ while true do
             local remainingTime = getRemainingTime()
 
             -- Kiểm tra xem thời gian còn lại là 14s không
-            if remainingTime and remainingTime == 14 then
+            if remainingTime and remainingTime == 13 then
                 -- Nếu thời gian còn lại là 14 giây và không có "Double Dungeon Appear"
                 if not isDoubleDungeonAppeared() then
                     -- Thực hiện các hành động (mua vé, tạo dungeon và bắt đầu dungeon)
