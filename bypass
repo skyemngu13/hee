@@ -36,36 +36,43 @@ while true do
     else
         local dungeonInfo = game.Players.LocalPlayer.PlayerGui.Hud.UpContanier.DungeonInfo
 
+        -- Hàm lấy thời gian còn lại
         local function getRemainingTime()
             local timeText = dungeonInfo.Text
             local minutes, seconds = timeText:match("Dungeon Ends in (%d+)m (%d+)s")
             if minutes then
                 return tonumber(minutes) * 60 + tonumber(seconds)
             else
-                return nil
+                local secondsOnly = timeText:match("Dungeon Ends in (%d+)s")
+                return secondsOnly and tonumber(secondsOnly)
             end
         end
 
+        -- Kiểm tra xem có "Double Dungeon Appear" trong Text không
         local function isDoubleDungeonAppeared()
             return string.match(dungeonInfo.Text, "Double Dungeon Appear") ~= nil
         end
 
+        -- Kiểm tra và theo dõi trạng thái dungeon
         local timeBeforeEnd = tick()
 
-        -- Đợi khi thời gian còn lại lớn hơn 14s
         repeat
             wait(1)
             local remainingTime = getRemainingTime()
+
+            -- Kiểm tra nếu thời gian còn lại <= 14 giây và có "Double Dungeon Appear"
             if remainingTime and remainingTime <= 14 then
                 if isDoubleDungeonAppeared() then
-                    return  -- Nếu có "Double Dungeon Appear", dừng lại, không làm gì
+                    -- Nếu "Double Dungeon Appear" xuất hiện, dừng lại và không làm gì
+                    return
                 end
             end
         until getRemainingTime() and getRemainingTime() <= 14
 
+        -- Kiểm tra lại sau khi vòng lặp kết thúc
         wait(3)
 
-        -- Nếu không có "Double Dungeon Appear", mua ticket và tạo dungeon mới
+        -- Nếu không có "Double Dungeon Appear", thực hiện mua ticket và tạo dungeon mới
         if not isDoubleDungeonAppeared() then
             -- Mua vé vào dungeon
             local args1 = {
