@@ -1,5 +1,8 @@
 while true do
+    -- Kiểm tra PlaceId
     if game.PlaceId == 87039211657390 then
+        -- Nếu là PlaceId này, chờ 5 giây rồi chạy các hành động sau
+        print("PlaceId khớp, đợi thêm 5 giây...")
         wait(3)
 
         -- Mua vé vào dungeon
@@ -33,58 +36,58 @@ while true do
         }
         game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
 
+        print("Dungeon mới đã bắt đầu!")
     else
+        -- Nếu không phải PlaceId 87039211657390, chạy script Dungeon thông thường
+        -- Khai báo đường dẫn đến GUI DungeonInfo
         local dungeonInfo = game.Players.LocalPlayer.PlayerGui.Hud.UpContanier.DungeonInfo
 
-        local function getRemainingTime()
-            local timeText = dungeonInfo.Text
-            local minutes, seconds = timeText:match("Dungeon Ends in (%d+)m (%d+)s")
-            if minutes then
-                return tonumber(minutes) * 60 + tonumber(seconds)
-            else
-                return nil
-            end
+        -- Hàm kiểm tra khi Dungeon còn 13 giây
+        local function isDungeonEndingIn13Seconds()
+            return string.match(dungeonInfo.Text, "^Dungeon Ends in 13s$") ~= nil
         end
 
-        -- Kiểm tra Dungeon Ends in 13s
-        repeat
+        -- Kiểm tra xem dungeon có còn 13 giây không
+        if isDungeonEndingIn13Seconds() then
+            print("Dungeon còn 13 giây, chuẩn bị bắt đầu hành động...")
+
+            -- Mua vé vào dungeon
+            local args1 = {
+                [1] = {
+                    [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
+                    [2] = "\n"
+                }
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args1))
+
             wait(1)
-            local remainingTime = getRemainingTime()
-            if remainingTime and remainingTime == 13 then
-                -- Thực hiện các hành động (mua vé, tạo dungeon và bắt đầu dungeon)
-                -- Mua vé vào dungeon
-                local args1 = {
-                    [1] = {
-                        [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
-                        [2] = "\n"
-                    }
+
+            -- Tạo dungeon
+            local args2 = {
+                [1] = {
+                    [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
+                    [2] = "\n"
                 }
-                game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args1))
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args2))
 
-                wait(1)
+            wait(1)
 
-                -- Tạo dungeon
-                local args2 = {
-                    [1] = {
-                        [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
-                        [2] = "\n"
-                    }
+            -- Bắt đầu dungeon
+            local args3 = {
+                [1] = {
+                    [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+                    [2] = "\n"
                 }
-                game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args2))
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
 
-                wait(1)
-
-                -- Bắt đầu dungeon
-                local args3 = {
-                    [1] = {
-                        [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
-                        [2] = "\n"
-                    }
-                }
-                game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
-
-                return  -- Thực hiện xong, thoát khỏi vòng lặp
-            end
-        until false  -- Lặp liên tục cho đến khi điều kiện trên được thoả mãn
+            print("Dungeon mới đã bắt đầu!")
+        else
+            print("Dungeon không còn 13 giây, không hành động.")
+        end
     end
+
+    -- Đợi một chút trước khi kiểm tra lại
+    wait(1)
 end
