@@ -2,7 +2,6 @@ while true do
     -- Kiểm tra PlaceId
     if game.PlaceId == 87039211657390 then
         -- Nếu là PlaceId này, chờ 5 giây rồi chạy các hành động sau
-        print("PlaceId khớp, đợi thêm 5 giây...")
         wait(3)
 
         -- Mua vé vào dungeon
@@ -36,7 +35,6 @@ while true do
         }
         game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
 
-        print("Dungeon mới đã bắt đầu!")
     else
         -- Nếu không phải PlaceId 87039211657390, chạy script Dungeon thông thường
         -- Khai báo đường dẫn đến GUI DungeonInfo
@@ -49,8 +47,6 @@ while true do
 
         -- Kiểm tra xem dungeon có còn 13 giây không
         if isDungeonEndingIn13Seconds() then
-            print("Dungeon còn 13 giây, chuẩn bị bắt đầu hành động...")
-
             -- Mua vé vào dungeon
             local args1 = {
                 [1] = {
@@ -82,9 +78,6 @@ while true do
             }
             game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
 
-            print("Dungeon mới đã bắt đầu!")
-        else
-            print("Dungeon không còn 13 giây, không hành động.")
         end
     end
 
