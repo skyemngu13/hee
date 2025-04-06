@@ -85,7 +85,7 @@ local function moveToAndPunch(mob)
 
     while not finished do task.wait() end
 
-    task.wait(0.7)
+    task.wait(0.5)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
