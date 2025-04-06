@@ -55,15 +55,13 @@ while true do
         -- Đợi khi thời gian còn lại lớn hơn 14s
         repeat
             wait(1)
-            if tick() - timeBeforeEnd > 6 then
-                local remainingTime = getRemainingTime()
-                if remainingTime and remainingTime <= 14 then
-                    if isDoubleDungeonAppeared() then
-                        return  -- Nếu có "Double Dungeon Appear", dừng lại, không làm gì
-                    end
+            local remainingTime = getRemainingTime()
+            if remainingTime and remainingTime <= 14 then
+                if isDoubleDungeonAppeared() then
+                    return  -- Nếu có "Double Dungeon Appear", dừng lại, không làm gì
                 end
             end
-        until string.match(dungeonInfo.Text, "^Dungeon Ends in %d+s$")
+        until getRemainingTime() and getRemainingTime() <= 14
 
         wait(3)
 
