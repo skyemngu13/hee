@@ -1,0 +1,24 @@
+local v1 = game:GetService("ReplicatedStorage")
+local v2 = game:GetService("Players").LocalPlayer
+local v3 = v1.SharedModules
+
+require(v3.Others.GuiFunctions)
+local v4 = require(v3.WeaponsModule)
+
+-- Chờ player load xong
+repeat
+    task.wait(1)
+until v2:GetAttribute("Loaded") == true
+
+-- ✅ Bật AutoClick khi executor chạy
+v2:SetAttribute("AutoClick", true)
+
+-- Bắt đầu auto click nếu có AutoClicker pass
+while true do
+    task.wait(0.1)
+    if v2.leaderstats.Passes:GetAttribute("AutoClicker") == true and v2:GetAttribute("AutoClick") == true then
+        v4.Click({
+            ["KeyCode"] = Enum.KeyCode.ButtonX
+        }, false, nil, true)
+    end
+end
