@@ -38,6 +38,7 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 🛡️ + Không bị kick nữa!
 ⚔️ + Arise đang có "Jinwoo"-"Pucci"-"Denji"
 ⛩️ + Check double "bú sjw N 🤑"
+🌡 + Fix ping cao 🗿
 ]])
 
 local MainTab = Window:MakeTab({
