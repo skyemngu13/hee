@@ -4,12 +4,6 @@ until game:IsLoaded() and game.Players.LocalPlayer and
       game.Workspace:FindFirstChild("__Extra") and 
       game.Workspace:FindFirstChild("__Main")
 
-while true do
-    wait(300) -- Chờ 5 phút (300 giây)
-    game:GetService("VirtualUser"):CaptureController()
-    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-end
-
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
 
 local Window = OrionLib:MakeWindow({
@@ -141,3 +135,10 @@ task.spawn(function()
         end
     end
 end)
+
+while true do
+    wait(300) -- Chờ 5 phút (300 giây)
+    game:GetService("VirtualUser"):CaptureController()
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+end
+print("hi")
