@@ -9,6 +9,7 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace.__Main.__Enemies.Server
 
 local speed, tween = 1000, nil
+local reachedMob = nil  -- Đánh dấu quái đã đến
 
 -- Find the nearest mob
 local function findNearestMob()
@@ -23,12 +24,6 @@ local function findNearestMob()
         end
     end
     return nearest
-end
-
--- Punch the mob
-local function punchMob(uuid)
-    local args = { [1] = { [1] = { ["Event"] = "PunchAttack", ["Enemy"] = uuid }, [2] = "\4" } }
-    ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
 end
 
 -- Destroy the mob
@@ -49,8 +44,9 @@ local function ariseMob(uuid)
     end
 end
 
--- Move to and punch the mob
-local function moveToAndPunch(mob)
+-- Move to the mob and monitor HP, but DO NOT punch
+local function moveToMob(mob)
+    -- Nếu đang tween, hủy tween cũ
     if tween then
         tween:Cancel()
     end
@@ -59,44 +55,55 @@ local function moveToAndPunch(mob)
     local distance = (mob.Position - rootPart.Position).Magnitude
     local tweenTime = distance / speed
 
-    local finished = false
+    -- Tween một lần đến quái
     tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
-    tween.Completed:Connect(function() finished = true end)
     tween:Play()
 
+    local finished = false
+    tween.Completed:Connect(function()
+        finished = true
+    end)
+
+    -- Chờ tween hoàn tất
     while not finished do
         task.wait()
     end
 
     task.wait(0.5)
 
+    -- Đánh dấu quái đã đến, người chơi có thể tự do di chuyển
+    reachedMob = mob
+
+    -- Theo dõi HP quái
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not mob or not mob.Parent then
             connection:Disconnect()
+            reachedMob = nil  -- Nếu quái chết, reset lại trạng thái
             return
         end
 
         local hp = mob:GetAttribute("HP")
         if not hp or hp <= 0 then
             connection:Disconnect()
-            if mob:GetAttribute("Model") == "JinWoo" or mob:GetAttribute("Model") == "Pucci" or mob:GetAttribute("Model") == "Denji" then
+            local model = mob:GetAttribute("Model")
+            if model == "JinWoo" or model == "Pucci" or model == "Denji" then
                 ariseMob(uuid)
             else
                 destroyMob(uuid)
             end
-            return
+            reachedMob = nil  -- Reset trạng thái khi quái chết
         end
-
-        punchMob(uuid)
-        task.wait(0.4)
     end)
 end
 
--- Main loop to continuously find and punch the nearest mob
+-- Main loop
 while task.wait(0.5) do
-    local mob = findNearestMob()
-    if mob then
-        moveToAndPunch(mob)
+    -- Nếu không có quái nào được đánh dấu đã đến, tìm và di chuyển đến quái tiếp theo
+    if not reachedMob then
+        local mob = findNearestMob()
+        if mob then
+            moveToMob(mob)
+        end
     end
 end
