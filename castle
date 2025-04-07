@@ -1,81 +1,56 @@
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- PlaceId của lobby và dungeon (castle)
-local lobbyPlaceId = 87039211657390  -- PlaceId của lobby
-local dungeonPlaceId = 128336380114944  -- PlaceId của dungeon (castle)
+-- ID của lobby
+local lobbyPlaceId = 87039211657390
 
--- Biến theo dõi trạng thái
-local isInDungeon = false
+-- Gửi remote JoinCastle
+local function joinCastle()
+    local args = {
+        [1] = {
+            [1] = {
+                ["Event"] = "JoinCastle"
+            },
+            [2] = "\n"
+        }
+    }
+    ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+end
 
--- Sự kiện khi nhân vật mới được thêm (sau teleport)
-LocalPlayer.CharacterAdded:Connect(function()
-    -- Kiểm tra nếu player đang ở trong dungeon
-    if game.PlaceId == dungeonPlaceId then
-        isInDungeon = true
-    else
-        isInDungeon = false
+-- Kiểm tra và xử lý khi đang trong dungeon
+spawn(function()
+    while true do
+        -- Đợi nhân vật xuất hiện để chắc chắn GUI đã load
+        if LocalPlayer.Character then
+            local success, err = pcall(function()
+                local roomText = LocalPlayer:WaitForChild("PlayerGui")
+                    :WaitForChild("Hud")
+                    :WaitForChild("UpContanier")
+                    :WaitForChild("Room").Text
+
+                -- Nếu text là "Floor: 31/100"
+                if tostring(roomText):find("Floor: 31/100") then
+                    wait(3)
+                    TeleportService:Teleport(lobbyPlaceId)
+                end
+            end)
+        end
+
+        wait(2) -- Kiểm tra thường xuyên hơn trong dungeon
     end
 end)
 
--- Vòng lặp kiểm tra thời gian thực
+-- Kiểm tra thời gian mỗi phút để gửi JoinCastle
 spawn(function()
     while true do
-        -- Lấy thời gian thực hiện tại
-        local currentTime = os.date("*t")
-        local currentMinute = currentTime.min
-        local currentHour = currentTime.hour
+        local currentMinute = os.date("*t").min
 
-        -- Nếu đang ở dungeon (PlaceId = dungeonPlaceId), đợi đến phút 00
-        if isInDungeon then
-            if currentMinute >= 45 and currentMinute <= 58 then
-                -- Đợi tới khi qua phút 58 và sang phút 00
-                while os.date("*t").min ~= 0 do
-                    wait(1)  -- Kiểm tra mỗi giây để đợi tới giờ 00
-                end
-            end
-
-            -- Sau khi qua phút 00, kiểm tra lại 45p để tele ra lobby
-            if currentMinute == 0 then
-                -- Kiểm tra nếu thời gian là 45-58p sau khi qua phút 00
-                if currentMinute >= 45 and currentMinute <= 58 then
-                    -- Gửi remote của bạn để join vào dungeon (castle)
-                    local args = {
-                        [1] = {
-                            [1] = {
-                                ["Event"] = "JoinCastle"
-                            },
-                            [2] = "\n"
-                        }
-                    }
-
-                    game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-                end
-            end
-        else
-            -- Nếu đang ở lobby (PlaceId = lobbyPlaceId), kiểm tra nếu thời gian thực từ 45-58 phút
-            if currentMinute >= 45 and currentMinute <= 58 then
-                -- Gửi remote của bạn để join vào dungeon (castle)
-                local args = {
-                    [1] = {
-                        [1] = {
-                            ["Event"] = "JoinCastle"
-                        },
-                        [2] = "\n"
-                    }
-                }
-
-                game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-            end
+        if currentMinute >= 45 and currentMinute <= 58 then
+            joinCastle()
         end
-        
-        -- Sau khi qua phút 00, tiếp tục kiểm tra 45-58p
-        if currentMinute == 0 then
-            -- Đợi 60 giây (để qua 00:01) rồi tiếp tục kiểm tra thời gian thực
-            wait(60)
-        else
-            wait(60)  -- Kiểm tra mỗi phút
-        end
+
+        wait(60)
     end
 end)
