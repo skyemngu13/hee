@@ -44,7 +44,7 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 ⚔️ + Arise đang có "Jinwoo"-"Pucci"-"Denji"
 ⛩️ + Check double "bú sjw N 🤑"
 🌡 + Fix ping cao 🗿
-++++ New auto click
++++ Add auto click
 ]])
 
 local MainTab = Window:MakeTab({
@@ -98,6 +98,31 @@ for _, t in ipairs(toggleList) do
         end
     })
 end
+
+-- Tạo Tab Misc với Toggle AutoClick (Tab này sẽ là tab thứ 3)
+local MiscTab = Window:MakeTab({
+    Name = "Misc",
+    Icon = "rbxassetid://83969479610474",
+    PremiumOnly = false
+})
+
+MiscTab:AddToggle({
+    Name = "AutoClick",  -- Toggle mới
+    Default = settings["AutoClick"] or false,
+    Callback = function(val)
+        settings["AutoClick"] = val
+        saveSettings()
+
+        if val then
+            -- Chạy script AutoClick sau 1 frame
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/autoclick"))()
+                end)
+            end)
+        end
+    end
+})
 
 -- Sau khi UI xong → chạy các script đã bật
 task.spawn(function()
