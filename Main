@@ -106,6 +106,8 @@ local MiscTab = Window:MakeTab({
     PremiumOnly = false
 })
 
+local autoClicking = false  -- Biến trạng thái AutoClick
+
 MiscTab:AddToggle({
     Name = "AutoClick",  -- Toggle mới
     Default = settings["AutoClick"] or false,
@@ -114,7 +116,8 @@ MiscTab:AddToggle({
         saveSettings()
 
         if val then
-            -- Bắt đầu script AutoClick khi toggle được bật
+            -- Bắt đầu AutoClick khi toggle bật
+            autoClicking = true
             local ReplicatedStorage = game:GetService("ReplicatedStorage")
             local Player = game:GetService("Players").LocalPlayer
             local SharedModules = ReplicatedStorage.SharedModules
@@ -125,20 +128,30 @@ MiscTab:AddToggle({
             -- Chờ player load xong
             repeat task.wait(1) until Player:GetAttribute("Loaded") == true
 
-            -- Nếu không có gamepass AutoClicker thì delay lâu hơn
-            if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
-                task.wait(0.4)
-            end
+            -- Bắt đầu AutoClick
+            task.spawn(function()
+                while autoClicking do
+                    task.wait(0.1)
 
-            -- Nếu bị tắt thì tự bật lại
-            if Player:GetAttribute("AutoClick") ~= true then
-                Player:SetAttribute("AutoClick", true)
-            end
+                    -- Nếu không có gamepass AutoClicker thì delay lâu hơn
+                    if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
+                        task.wait(0.4)
+                    end
 
-            -- Gọi Click
-            WeaponsModule.Click({
-                ["KeyCode"] = Enum.KeyCode.ButtonX
-            }, false, nil, true)
+                    -- Nếu bị tắt thì tự bật lại
+                    if Player:GetAttribute("AutoClick") ~= true then
+                        Player:SetAttribute("AutoClick", true)
+                    end
+
+                    -- Gọi Click
+                    WeaponsModule.Click({
+                        ["KeyCode"] = Enum.KeyCode.ButtonX
+                    }, false, nil, true)
+                end
+            end)
+        else
+            -- Dừng AutoClick khi toggle tắt
+            autoClicking = false
         end
     end
 })
