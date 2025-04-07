@@ -37,12 +37,9 @@ spawn(function()
                 end
             end
         else
-            -- Nếu không ở dungeon, kiểm tra giờ thực để teleport
+            -- Nếu không ở dungeon (lobby), kiểm tra giờ thực để gửi remote
             if currentMinute >= 45 and currentMinute <= 58 then
-                -- Teleport vào castle (nếu đang ở lobby)
-                TeleportService:Teleport(dungeonPlaceId, LocalPlayer)
-                
-                -- Sau khi teleport vào castle, gửi remote join castle
+                -- Gửi remote để teleport vào dungeon (join castle)
                 local args = {
                     [1] = {
                         [1] = {
@@ -51,6 +48,7 @@ spawn(function()
                         [2] = "\n"
                     }
                 }
+
                 game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
             end
         end
