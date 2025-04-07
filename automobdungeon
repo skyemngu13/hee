@@ -69,7 +69,7 @@ local function moveToMob(mob)
         task.wait()
     end
 
-    task.wait(0.5)
+    task.wait(0.4)
 
     -- Đánh dấu quái đã đến, người chơi có thể tự do di chuyển
     reachedMob = mob
@@ -98,7 +98,7 @@ local function moveToMob(mob)
 end
 
 -- Main loop
-while task.wait(0.5) do
+while task.wait(0.3) do
     -- Nếu không có quái nào được đánh dấu đã đến, tìm và di chuyển đến quái tiếp theo
     if not reachedMob then
         local mob = findNearestMob()
