@@ -10,7 +10,7 @@ local enemies = workspace.__Main.__Enemies.Server
 
 local speed, tween = 1000, nil
 local lastAttackTime = 0
-local attackCooldown = 0.6  -- Thêm thời gian giữa các đợt tấn công để tránh việc gọi liên tục
+local attackCooldown = 0.5 -- Thêm thời gian giữa các đợt tấn công để tránh việc gọi liên tục
 
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
