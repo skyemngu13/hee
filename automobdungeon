@@ -92,7 +92,6 @@ local function moveToAndPunch(mob)
     end
 
     tween:Cancel()
-    task.wait(0.4)
 
     -- Đảm bảo chỉ có 1 Heartbeat
     local connection
@@ -124,7 +123,7 @@ end
 
 -- Chạy luồng chính, chờ xử lý xong rồi mới xử lý mob tiếp theo
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.3) do
         if not isBusy then
             local mob = findNearestMob()
             if mob then
