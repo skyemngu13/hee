@@ -135,10 +135,3 @@ task.spawn(function()
         end
     end
 end)
-
-while true do
-    wait(300) -- Chờ 5 phút (300 giây)
-    game:GetService("VirtualUser"):CaptureController()
-    game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-end
-print("hi")
