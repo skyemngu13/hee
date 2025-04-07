@@ -8,7 +8,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace.__Main.__Enemies.Server
 
-local speed = 500
+local speed = 1000
 local tween = nil
 local reachedMob = nil
 
@@ -100,7 +100,7 @@ local function moveToMob(mob)
 end
 
 -- Main loop
-while task.wait(0.7) do
+while task.wait(0.9) do
     if not reachedMob then
         local mob = findNearestMob()
         if mob then
