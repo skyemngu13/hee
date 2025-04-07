@@ -2,8 +2,8 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- PlaceId của dungeon (castle) và lobby
-local lobbyPlaceId = 1234567890  -- <-- thay bằng PlaceId của lobby
+-- PlaceId của lobby và dungeon (castle)
+local lobbyPlaceId = 87039211657390  -- <-- thay bằng PlaceId của lobby
 local dungeonPlaceId = 128336380114944  -- PlaceId của dungeon (castle)
 
 -- Biến theo dõi trạng thái
@@ -29,8 +29,8 @@ spawn(function()
 
         -- Nếu đang ở dungeon, đợi cho đến khi vào giờ mới (xx:00)
         if isInDungeon then
-            -- Kiểm tra nếu là phút 45, chờ tới phút 00 rồi tiếp tục
-            if currentMinute >= 45 then
+            -- Nếu hiện tại là phút 45 trở lên, nhưng chưa đến phút 58, đợi cho đến khi qua phút 58
+            if currentMinute >= 45 and currentMinute <= 58 then
                 -- Đợi đến giờ tiếp theo (xx:00)
                 while os.date("*t").min ~= 0 do
                     wait(1)  -- Kiểm tra mỗi giây để đợi tới giờ 00
@@ -38,13 +38,20 @@ spawn(function()
             end
         else
             -- Nếu không ở dungeon, kiểm tra giờ thực để teleport
-            if currentMinute == 45 then
-                -- Teleport ra lobby
-                TeleportService:Teleport(lobbyPlaceId, LocalPlayer)
-                wait(3)  -- Đợi 3 giây để ổn định sau teleport ra lobby
-                
-                -- Teleport vào dungeon
+            if currentMinute >= 45 and currentMinute <= 58 then
+                -- Teleport vào castle (nếu đang ở lobby)
                 TeleportService:Teleport(dungeonPlaceId, LocalPlayer)
+                
+                -- Sau khi teleport vào castle, gửi remote join castle
+                local args = {
+                    [1] = {
+                        [1] = {
+                            ["Event"] = "JoinCastle"
+                        },
+                        [2] = "\n"
+                    }
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
             end
         end
         
