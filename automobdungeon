@@ -1,50 +1,3 @@
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local enemies = workspace.__Main.__Enemies.Server
-
-local speed = 500
-local tween = nil
-local reachedMob = nil
-
--- Find the nearest mob
-local function findNearestMob()
-    local nearest, minDist = nil, math.huge
-    for _, mob in pairs(enemies:GetChildren()) do
-        local hp = mob:GetAttribute("HP")
-        if hp and hp > 0 then
-            local dist = (mob.Position - rootPart.Position).Magnitude
-            if dist < minDist then
-                minDist, nearest = dist, mob
-            end
-        end
-    end
-    return nearest
-end
-
--- Destroy the mob
-local function destroyMob(uuid)
-    for i = 1, 5 do
-        local args = { [1] = { [1] = { ["Event"] = "EnemyDestroy", ["Enemy"] = uuid }, [2] = "\4" } }
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.1)
-    end
-end
-
--- Arise the mob
-local function ariseMob(uuid)
-    for i = 1, 5 do
-        local args = { [1] = { [1] = { ["Event"] = "EnemyCapture", ["Enemy"] = uuid }, [2] = "\4" } }
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.1)
-    end
-end
-
 -- Move to the mob and monitor HP, but DO NOT punch
 local function moveToMob(mob)
     if tween then
@@ -72,13 +25,13 @@ local function moveToMob(mob)
         if not hp or hp <= 0 then
             connection:Disconnect()
             local model = mob:GetAttribute("Model")
-            if model == "JinWoo" or model == "Pucci" or model == "Denji" then
-                -- Giảm delay cho quá trình arise mob
+            local scale = mob:GetAttribute("Scale") or 1
+
+            if (model == "JinWoo" or model == "Pucci" or model == "Denji") and scale >= 2 then
                 task.spawn(function()
                     ariseMob(uuid)
                 end)
             else
-                -- Giảm delay cho quá trình destroy mob
                 task.spawn(function()
                     destroyMob(uuid)
                 end)
@@ -93,14 +46,4 @@ local function moveToMob(mob)
             reachedMob = mob
         end
     end)
-end
-
--- Main loop
-while task.wait(0.7) do
-    if not reachedMob then
-        local mob = findNearestMob()
-        if mob then
-            moveToMob(mob)
-        end
-    end
 end
