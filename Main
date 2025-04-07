@@ -25,7 +25,7 @@ end
 
 local InfoTab = Window:MakeTab({
     Name = "Info",
-    Icon = "rbxassetid://6031071058",
+    Icon = "rbxassetid://83969479610474",
     PremiumOnly = false
 })
 
@@ -41,7 +41,7 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 
 local MainTab = Window:MakeTab({
     Name = "Main",
-    Icon = "rbxassetid://6031071050",
+    Icon = "rbxassetid://124598949660449",
     PremiumOnly = false
 })
 
