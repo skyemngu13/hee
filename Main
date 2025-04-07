@@ -135,3 +135,15 @@ task.spawn(function()
         end
     end
 end)
+
+-- Bật Anti-AFK sau khi UI khởi động
+task.spawn(function()
+    while true do
+        wait(300) -- Chờ 5 phút (300 giây)
+        pcall(function()
+            local vu = game:GetService("VirtualUser")
+            vu:CaptureController()
+            vu:ClickButton2(Vector2.new())
+        end)
+    end
+end)
