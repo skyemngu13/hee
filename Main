@@ -102,7 +102,7 @@ end
 -- Tạo Tab Misc với Toggle AutoClick (Tab này sẽ là tab thứ 3)
 local MiscTab = Window:MakeTab({
     Name = "Misc",
-    Icon = "rbxassetid://83969479610474",
+    Icon = "rbxassetid://77355396768701",
     PremiumOnly = false
 })
 
