@@ -89,12 +89,12 @@ local function moveToAndPunch(mob)
         end
 
         punchMob(uuid)
-        task.wait(0.5)
+        task.wait(0.4)
     end)
 end
 
 -- Main loop to continuously find and punch the nearest mob
-while task.wait(0.3) do
+while task.wait(0.5) do
     local mob = findNearestMob()
     if mob then
         moveToAndPunch(mob)
