@@ -1,4 +1,17 @@
-if game.PlaceId == 87039211657390 then
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- PlaceId cần teleport
+local placeId = 87039211657390
+
+-- Kiểm tra nếu đang ở PlaceId 87039211657390
+if game.PlaceId == placeId then
+    -- Nếu đang ở PlaceId này, trực tiếp chạy remote
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local remoteEvent = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- Tạo args để gửi remote
     local args = {
         [1] = {
             [1] = {
@@ -8,5 +21,36 @@ if game.PlaceId == 87039211657390 then
         }
     }
 
-    game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+    -- Gửi remote
+    remoteEvent:FireServer(unpack(args))
+else
+    -- Kiểm tra phút hiện tại
+    local currentMinute = os.date("*t").min
+    if currentMinute >= 45 and currentMinute <= 58 then
+        -- Teleport đến PlaceId
+        TeleportService:Teleport(placeId, LocalPlayer)
+    end
 end
+
+-- Sau khi teleport, kiểm tra nếu vào đúng PlaceId, thực hiện remote
+LocalPlayer.CharacterAdded:Connect(function()
+    -- Kiểm tra xem player có vào đúng PlaceId hay không
+    if game.PlaceId == placeId then
+        -- Đợi đến khi remote sẵn sàng
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local remoteEvent = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+        -- Tạo args để gửi remote
+        local args = {
+            [1] = {
+                [1] = {
+                    ["Event"] = "JoinCastle"
+                },
+                [2] = "\n"
+            }
+        }
+
+        -- Gửi remote
+        remoteEvent:FireServer(unpack(args))
+    end
+end)
