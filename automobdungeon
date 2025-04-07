@@ -69,7 +69,7 @@ local function moveToMob(mob)
         task.wait()
     end
 
-    task.wait(0.4)
+    task.wait(0.3)
 
     -- Đánh dấu quái đã đến, người chơi có thể tự do di chuyển
     reachedMob = mob
