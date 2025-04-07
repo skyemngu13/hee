@@ -117,7 +117,15 @@ MiscTab:AddToggle({
             -- Chạy script AutoClick sau 1 frame
             task.spawn(function()
                 pcall(function()
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/autoclick"))()
+                    -- Kiểm tra lại URL script và tải về đúng cách
+                    local success, result = pcall(function()
+                        return game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/autoclick")
+                    end)
+                    if success and result then
+                        loadstring(result)()
+                    else
+                        warn("Không thể tải script AutoClick: " .. (result or "Unknown error"))
+                    end
                 end)
             end)
         end
