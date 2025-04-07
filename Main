@@ -114,20 +114,31 @@ MiscTab:AddToggle({
         saveSettings()
 
         if val then
-            -- Chạy script AutoClick sau 1 frame
-            task.spawn(function()
-                pcall(function()
-                    -- Kiểm tra lại URL script và tải về đúng cách
-                    local success, result = pcall(function()
-                        return game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/autoclick")
-                    end)
-                    if success and result then
-                        loadstring(result)()
-                    else
-                        warn("Không thể tải script AutoClick: " .. (result or "Unknown error"))
-                    end
-                end)
-            end)
+            -- Bắt đầu script AutoClick khi toggle được bật
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local Player = game:GetService("Players").LocalPlayer
+            local SharedModules = ReplicatedStorage.SharedModules
+
+            require(SharedModules.Others.GuiFunctions)
+            local WeaponsModule = require(SharedModules.WeaponsModule)
+
+            -- Chờ player load xong
+            repeat task.wait(1) until Player:GetAttribute("Loaded") == true
+
+            -- Nếu không có gamepass AutoClicker thì delay lâu hơn
+            if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
+                task.wait(0.4)
+            end
+
+            -- Nếu bị tắt thì tự bật lại
+            if Player:GetAttribute("AutoClick") ~= true then
+                Player:SetAttribute("AutoClick", true)
+            end
+
+            -- Gọi Click
+            WeaponsModule.Click({
+                ["KeyCode"] = Enum.KeyCode.ButtonX
+            }, false, nil, true)
         end
     end
 })
