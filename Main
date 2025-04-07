@@ -128,7 +128,7 @@ MiscTab:AddToggle({
             -- Chờ player load xong
             repeat task.wait(1) until Player:GetAttribute("Loaded") == true
 
-            -- Bắt đầu AutoClick
+            -- Bắt đầu vòng lặp AutoClick
             task.spawn(function()
                 while autoClicking do
                     task.wait(0.1)
