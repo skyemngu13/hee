@@ -12,7 +12,7 @@ local speed = 1000
 local isBusy = false
 
 -- Thêm cooldown punch
-local punchCooldown = 0.3
+local punchCooldown = 0.5
 local lastPunchTime = 0
 
 local function findNearestMob()
@@ -96,7 +96,6 @@ local function moveToAndPunch(mob)
     end
 
     tween:Cancel()
-    task.wait(0.3)
 
     -- Đảm bảo chỉ có 1 Heartbeat
     local connection
