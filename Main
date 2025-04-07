@@ -1,0 +1,104 @@
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
+
+local Window = OrionLib:MakeWindow({
+    Name = "Pịa Hub - Pịa xào me",  -- Thêm phần text "Pịa xào me" phía trước
+    HidePremium = false,
+    SaveConfig = false,
+    ConfigFolder = "AutoHub"
+})
+
+local settingsFile = "autohub_settings.json"
+local HttpService = game:GetService("HttpService")
+
+-- Đọc settings
+local settings = {}
+pcall(function()
+    if isfile(settingsFile) then
+        settings = HttpService:JSONDecode(readfile(settingsFile))
+    end
+end)
+
+-- Lưu settings
+local function saveSettings()
+    writefile(settingsFile, HttpService:JSONEncode(settings))
+end
+
+local InfoTab = Window:MakeTab({
+    Name = "Info",
+    Icon = "rbxassetid://6031071058",
+    PremiumOnly = false
+})
+
+-- Thông báo cập nhật
+InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
+📌 Version: v1.1
+🆕 Thêm Auto Join Castle
+🔧 Cải thiện hiệu xuất tính năng
+💡 Lưu setting khi telepoint
+🛡️ Không bị kick nữa!
+⚔️ Arise đang có "Jinwoo"-"Pucci"-"Denji"
+]])
+
+local MainTab = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://6031071050",
+    PremiumOnly = false
+})
+
+local toggleList = {
+    {
+        Name = "Auto Bypass",
+        Key = "AutoBypass",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/bypass"
+    },
+    {
+        Name = "Auto Kill Dungeon",
+        Key = "AutoKillDungeon",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/automobdungeon"
+    },
+    {
+        Name = "Auto Farm Mori",
+        Key = "AutoFarmMori",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/mori"
+    },
+    {
+        Name = "Auto Join Castle",  -- 👈 Toggle mới
+        Key = "AutoJoinCastle",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/castle"
+    }
+}
+
+-- Tạo toggle
+for _, t in ipairs(toggleList) do
+    settings[t.Key] = settings[t.Key] or false
+
+    MainTab:AddToggle({
+        Name = t.Name,
+        Default = settings[t.Key],
+        Callback = function(val)
+            settings[t.Key] = val
+            saveSettings()
+
+            if val then
+                -- Chạy sau 1 frame, tránh crash UI
+                task.spawn(function()
+                    pcall(function()
+                        loadstring(game:HttpGet(t.Script))()
+                    end)
+                end)
+            end
+        end
+    })
+end
+
+-- Sau khi UI xong → chạy các script đã bật
+task.spawn(function()
+    task.wait(1) -- đảm bảo UI vẽ xong
+    for _, t in ipairs(toggleList) do
+        if settings[t.Key] then
+            pcall(function()
+                loadstring(game:HttpGet(t.Script))()
+            end)
+        end
+    end
+end)
