@@ -2,55 +2,52 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- PlaceId cần teleport
-local placeId = 87039211657390
+-- PlaceId của dungeon (castle) và lobby
+local lobbyPlaceId = 1234567890  -- <-- thay bằng PlaceId của lobby
+local dungeonPlaceId = 128336380114944  -- PlaceId của dungeon (castle)
 
--- Kiểm tra nếu đang ở PlaceId 87039211657390
-if game.PlaceId == placeId then
-    -- Nếu đang ở PlaceId này, trực tiếp chạy remote
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local remoteEvent = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+-- Biến theo dõi trạng thái
+local isInDungeon = false
 
-    -- Tạo args để gửi remote
-    local args = {
-        [1] = {
-            [1] = {
-                ["Event"] = "JoinCastle"
-            },
-            [2] = "\n"
-        }
-    }
-
-    -- Gửi remote
-    remoteEvent:FireServer(unpack(args))
-else
-    -- Kiểm tra phút hiện tại
-    local currentMinute = os.date("*t").min
-    if currentMinute >= 45 and currentMinute <= 58 then
-        -- Teleport đến PlaceId
-        TeleportService:Teleport(placeId, LocalPlayer)
-    end
-end
-
--- Sau khi teleport, kiểm tra nếu vào đúng PlaceId, thực hiện remote
+-- Sự kiện khi nhân vật mới được thêm (sau teleport)
 LocalPlayer.CharacterAdded:Connect(function()
-    -- Kiểm tra xem player có vào đúng PlaceId hay không
-    if game.PlaceId == placeId then
-        -- Đợi đến khi remote sẵn sàng
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local remoteEvent = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+    -- Kiểm tra nếu player đang ở trong dungeon
+    if game.PlaceId == dungeonPlaceId then
+        isInDungeon = true
+    else
+        isInDungeon = false
+    end
+end)
 
-        -- Tạo args để gửi remote
-        local args = {
-            [1] = {
-                [1] = {
-                    ["Event"] = "JoinCastle"
-                },
-                [2] = "\n"
-            }
-        }
+-- Vòng lặp kiểm tra thời gian thực
+spawn(function()
+    while true do
+        -- Lấy thời gian thực hiện tại
+        local currentTime = os.date("*t")
+        local currentMinute = currentTime.min
+        local currentHour = currentTime.hour
 
-        -- Gửi remote
-        remoteEvent:FireServer(unpack(args))
+        -- Nếu đang ở dungeon, đợi cho đến khi vào giờ mới (xx:00)
+        if isInDungeon then
+            -- Kiểm tra nếu là phút 45, chờ tới phút 00 rồi tiếp tục
+            if currentMinute >= 45 then
+                -- Đợi đến giờ tiếp theo (xx:00)
+                while os.date("*t").min ~= 0 do
+                    wait(1)  -- Kiểm tra mỗi giây để đợi tới giờ 00
+                end
+            end
+        else
+            -- Nếu không ở dungeon, kiểm tra giờ thực để teleport
+            if currentMinute == 45 then
+                -- Teleport ra lobby
+                TeleportService:Teleport(lobbyPlaceId, LocalPlayer)
+                wait(3)  -- Đợi 3 giây để ổn định sau teleport ra lobby
+                
+                -- Teleport vào dungeon
+                TeleportService:Teleport(dungeonPlaceId, LocalPlayer)
+            end
+        end
+        
+        wait(60)  -- Kiểm tra mỗi phút
     end
 end)
