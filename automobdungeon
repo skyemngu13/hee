@@ -73,9 +73,15 @@ local function moveToMob(mob)
             connection:Disconnect()
             local model = mob:GetAttribute("Model")
             if model == "JinWoo" or model == "Pucci" or model == "Denji" then
-                ariseMob(uuid)
+                -- Giảm delay cho quá trình arise mob
+                task.spawn(function()
+                    ariseMob(uuid)
+                end)
             else
-                destroyMob(uuid)
+                -- Giảm delay cho quá trình destroy mob
+                task.spawn(function()
+                    destroyMob(uuid)
+                end)
             end
             reachedMob = nil
         end
@@ -90,7 +96,7 @@ local function moveToMob(mob)
 end
 
 -- Main loop
-while task.wait(0.5) do
+while task.wait(0.7) do
     if not reachedMob then
         local mob = findNearestMob()
         if mob then
