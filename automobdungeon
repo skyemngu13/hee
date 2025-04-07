@@ -100,7 +100,7 @@ local function moveToMob(mob)
 end
 
 -- Main loop
-while task.wait(0.9) do
+while task.wait(1.2) do
     if not reachedMob then
         local mob = findNearestMob()
         if mob then
