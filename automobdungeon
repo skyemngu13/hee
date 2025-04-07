@@ -8,8 +8,9 @@ local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace.__Main.__Enemies.Server
 
-local speed, tween = 1000, nil
-local reachedMob = nil  -- Đánh dấu quái đã đến
+local speed = 500
+local tween = nil
+local reachedMob = nil
 
 -- Find the nearest mob
 local function findNearestMob()
@@ -31,7 +32,7 @@ local function destroyMob(uuid)
     for i = 1, 5 do
         local args = { [1] = { [1] = { ["Event"] = "EnemyDestroy", ["Enemy"] = uuid }, [2] = "\4" } }
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end
 
@@ -40,13 +41,12 @@ local function ariseMob(uuid)
     for i = 1, 5 do
         local args = { [1] = { [1] = { ["Event"] = "EnemyCapture", ["Enemy"] = uuid }, [2] = "\4" } }
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end
 
 -- Move to the mob and monitor HP, but DO NOT punch
 local function moveToMob(mob)
-    -- Nếu đang tween, hủy tween cũ
     if tween then
         tween:Cancel()
     end
@@ -55,31 +55,16 @@ local function moveToMob(mob)
     local distance = (mob.Position - rootPart.Position).Magnitude
     local tweenTime = distance / speed
 
-    -- Tween một lần đến quái
+    -- Tween đến quái
     tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
     tween:Play()
 
-    local finished = false
-    tween.Completed:Connect(function()
-        finished = true
-    end)
-
-    -- Chờ tween hoàn tất
-    while not finished do
-        task.wait()
-    end
-
-    task.wait(0.2)
-
-    -- Đánh dấu quái đã đến, người chơi có thể tự do di chuyển
-    reachedMob = mob
-
-    -- Theo dõi HP quái
+    -- Theo dõi HP của quái trong khi di chuyển
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not mob or not mob.Parent then
             connection:Disconnect()
-            reachedMob = nil  -- Nếu quái chết, reset lại trạng thái
+            reachedMob = nil
             return
         end
 
@@ -92,14 +77,20 @@ local function moveToMob(mob)
             else
                 destroyMob(uuid)
             end
-            reachedMob = nil  -- Reset trạng thái khi quái chết
+            reachedMob = nil
+        end
+    end)
+
+    -- Đợi tween xong và di chuyển tiếp đến mob khác ngay lập tức
+    tween.Completed:Connect(function()
+        if not reachedMob then
+            reachedMob = mob
         end
     end)
 end
 
 -- Main loop
-while task.wait(0.2) do
-    -- Nếu không có quái nào được đánh dấu đã đến, tìm và di chuyển đến quái tiếp theo
+while task.wait(0.5) do
     if not reachedMob then
         local mob = findNearestMob()
         if mob then
