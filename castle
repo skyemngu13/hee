@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- PlaceId của lobby và dungeon (castle)
-local lobbyPlaceId = 87039211657390  -- <-- thay bằng PlaceId của lobby
+local lobbyPlaceId = 87039211657390  -- PlaceId của lobby
 local dungeonPlaceId = 128336380114944  -- PlaceId của dungeon (castle)
 
 -- Biến theo dõi trạng thái
@@ -27,19 +27,36 @@ spawn(function()
         local currentMinute = currentTime.min
         local currentHour = currentTime.hour
 
-        -- Nếu đang ở dungeon, đợi cho đến khi vào giờ mới (xx:00)
+        -- Nếu đang ở dungeon (PlaceId = dungeonPlaceId), đợi đến phút 00
         if isInDungeon then
-            -- Nếu hiện tại là phút 45 trở lên, nhưng chưa đến phút 58, đợi cho đến khi qua phút 58
             if currentMinute >= 45 and currentMinute <= 58 then
-                -- Đợi đến giờ tiếp theo (xx:00)
+                -- Đợi tới khi qua phút 58 và sang phút 00
                 while os.date("*t").min ~= 0 do
                     wait(1)  -- Kiểm tra mỗi giây để đợi tới giờ 00
                 end
             end
+
+            -- Sau khi qua phút 00, kiểm tra lại 45p để tele ra lobby
+            if currentMinute == 0 then
+                -- Kiểm tra nếu thời gian là 45-58p sau khi qua phút 00
+                if currentMinute >= 45 and currentMinute <= 58 then
+                    -- Gửi remote của bạn để join vào dungeon (castle)
+                    local args = {
+                        [1] = {
+                            [1] = {
+                                ["Event"] = "JoinCastle"
+                            },
+                            [2] = "\n"
+                        }
+                    }
+
+                    game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+                end
+            end
         else
-            -- Nếu không ở dungeon (lobby), kiểm tra giờ thực để gửi remote
+            -- Nếu đang ở lobby (PlaceId = lobbyPlaceId), kiểm tra nếu thời gian thực từ 45-58 phút
             if currentMinute >= 45 and currentMinute <= 58 then
-                -- Gửi remote để teleport vào dungeon (join castle)
+                -- Gửi remote của bạn để join vào dungeon (castle)
                 local args = {
                     [1] = {
                         [1] = {
@@ -53,6 +70,12 @@ spawn(function()
             end
         end
         
-        wait(60)  -- Kiểm tra mỗi phút
+        -- Sau khi qua phút 00, tiếp tục kiểm tra 45-58p
+        if currentMinute == 0 then
+            -- Đợi 60 giây (để qua 00:01) rồi tiếp tục kiểm tra thời gian thực
+            wait(60)
+        else
+            wait(60)  -- Kiểm tra mỗi phút
+        end
     end
 end)
