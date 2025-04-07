@@ -92,7 +92,7 @@ local function moveToAndPunch(mob)
     end
 
     tween:Cancel()
-    task.wait(0.6)
+    task.wait(0.5)
 
     -- Đảm bảo chỉ có 1 Heartbeat
     local connection
