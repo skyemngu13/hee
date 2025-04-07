@@ -35,10 +35,10 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 🆕 + Thêm Auto Join Castle
 🔧 + Cải thiện hiệu xuất tính năng
 💡 + Lưu setting khi telepoint
-🛡️ + Không bị kick nữa!
 ⚔️ + Arise đang có "Jinwoo"-"Pucci"-"Denji"
 ⛩️ + Check double "bú sjw N 🤑"
 🌡 + Fix ping cao 🗿
+++++ New auto click
 ]])
 
 local MainTab = Window:MakeTab({
