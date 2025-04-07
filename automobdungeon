@@ -98,7 +98,7 @@ local function moveToAndPunch(mob)
         if not hp or hp <= 0 then
             connection:Disconnect()
 
-            if mob:GetAttribute("Model") == "JinWoo" then
+            if mob:GetAttribute("Model") == "JinWoo" or mob:GetAttribute("Model") == "Pucci" or mob:GetAttribute("Model") == "Denji" then
                 ariseMob(uuid)
             else
                 destroyMob(uuid)
