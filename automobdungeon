@@ -10,7 +10,9 @@ local enemies = workspace.__Main.__Enemies.Server
 
 local speed = 1000
 local isBusy = false
-local punchCooldown = 0.5
+
+-- Thêm cooldown punch
+local punchCooldown = 0.3
 local lastPunchTime = 0
 
 local function findNearestMob()
@@ -28,7 +30,7 @@ local function findNearestMob()
 end
 
 local function punchMob(uuid)
-    ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+    local args = {
         [1] = {
             [1] = {
                 ["Event"] = "PunchAttack",
@@ -36,11 +38,12 @@ local function punchMob(uuid)
             },
             [2] = "\4"
         }
-    })
+    }
+    ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
 end
 
 local function destroyMob(uuid)
-    for _ = 1, 5 do
+    for i = 1, 5 do
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
             [1] = {
                 [1] = {
@@ -55,7 +58,7 @@ local function destroyMob(uuid)
 end
 
 local function ariseMob(uuid)
-    for _ = 1, 5 do
+    for i = 1, 5 do
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
             [1] = {
                 [1] = {
@@ -79,20 +82,28 @@ local function moveToAndPunch(mob)
 
     local finished = false
     local tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
-    tween.Completed:Connect(function() finished = true end)
+    tween.Completed:Connect(function()
+        finished = true
+    end)
     tween:Play()
 
-    local timeout, elapsed = 3, 0
+    -- Timeout để tránh treo vĩnh viễn
+    local timeout = 3
+    local elapsed = 0
     while not finished and elapsed < timeout do
         if not mob or not mob.Parent then break end
         elapsed += task.wait()
     end
-    tween:Cancel()
 
+    tween:Cancel()
+    task.wait(0.3)
+
+    -- Đảm bảo chỉ có 1 Heartbeat
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not mob or not mob.Parent then
             connection:Disconnect()
+            connection = nil
             isBusy = false
             return
         end
@@ -100,18 +111,17 @@ local function moveToAndPunch(mob)
         local hp = mob:GetAttribute("HP")
         if not hp or hp <= 0 then
             connection:Disconnect()
-            task.spawn(function()
-                if mob:GetAttribute("Model") == "JinWoo" or mob:GetAttribute("Model") == "Pucci" or mob:GetAttribute("Model") == "Denji" then
-                    ariseMob(uuid)
-                else
-                    destroyMob(uuid)
-                end
-            end)
+            connection = nil
+            if mob:GetAttribute("Model") == "JinWoo" or mob:GetAttribute("Model") == "Pucci" or mob:GetAttribute("Model") == "Denji" then
+                ariseMob(uuid)
+            else
+                destroyMob(uuid)
+            end
             isBusy = false
             return
         end
 
-        -- Punch cooldown
+        -- Kiểm tra cooldown trước khi punch
         if tick() - lastPunchTime >= punchCooldown then
             punchMob(uuid)
             lastPunchTime = tick()
@@ -119,7 +129,7 @@ local function moveToAndPunch(mob)
     end)
 end
 
--- Main loop
+-- Chạy luồng chính, chờ xử lý xong rồi mới xử lý mob tiếp theo
 task.spawn(function()
     while task.wait(0.3) do
         if not isBusy then
