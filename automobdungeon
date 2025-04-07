@@ -79,6 +79,7 @@ local function moveToMob(mob)
             local model = mob:GetAttribute("Model")
             local scale = mob:GetAttribute("Scale") or 1
 
+            -- Tiêu diệt hoặc hồi sinh mob sau khi xác định mô hình và scale
             if strongModels[model] and scale >= 2 then
                 task.spawn(function()
                     ariseMob(uuid)
@@ -88,6 +89,10 @@ local function moveToMob(mob)
                     destroyMob(uuid)
                 end)
             end
+
+            -- Thêm độ trễ 0.5s sau khi tiêu diệt hoặc hồi sinh mob
+            task.wait(0.5) 
+
             reachedMob = nil
         end
     end)
