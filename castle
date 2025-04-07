@@ -2,9 +2,11 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
--- ID của lobby
 local lobbyPlaceId = 87039211657390
+local enemies = workspace.__Main.__Enemies.Server
+local checking = false
 
 -- Gửi remote JoinCastle
 local function joinCastle()
@@ -19,10 +21,9 @@ local function joinCastle()
     ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
 end
 
--- Kiểm tra và xử lý khi đang trong dungeon
+-- Kiểm tra điều kiện teleport về lobby ở Floor 30
 spawn(function()
     while true do
-        -- Đợi nhân vật xuất hiện để chắc chắn GUI đã load
         if LocalPlayer.Character then
             local success, err = pcall(function()
                 local roomText = LocalPlayer:WaitForChild("PlayerGui")
@@ -30,15 +31,33 @@ spawn(function()
                     :WaitForChild("UpContanier")
                     :WaitForChild("Room").Text
 
-                -- Nếu text là "Floor: 31/100"
-                if tostring(roomText):find("Floor: 31/100") then
-                    wait(3)
-                    TeleportService:Teleport(lobbyPlaceId)
+                if tostring(roomText):find("Floor: 30/100") and not checking then
+                    checking = true
+
+                    -- Theo dõi mob Pucci có Scale >= 2 và HP = 0
+                    for _, mob in pairs(enemies:GetChildren()) do
+                        local model = mob:GetAttribute("Model")
+                        local scale = mob:GetAttribute("Scale") or 1
+                        local hp = mob:GetAttribute("HP")
+
+                        if model == "Pucci" and scale >= 2 and hp and hp > 0 then
+                            -- Theo dõi HP
+                            local conn
+                            conn = RunService.Heartbeat:Connect(function()
+                                local currentHP = mob:GetAttribute("HP")
+                                if not mob or not mob.Parent or not currentHP or currentHP <= 0 then
+                                    conn:Disconnect()
+                                    task.wait(3)
+                                    TeleportService:Teleport(lobbyPlaceId)
+                                end
+                            end)
+                        end
+                    end
                 end
             end)
         end
 
-        wait(2) -- Kiểm tra thường xuyên hơn trong dungeon
+        wait(2)
     end
 end)
 
