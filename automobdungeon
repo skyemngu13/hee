@@ -8,12 +8,9 @@ local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace.__Main.__Enemies.Server
 
-local speed = 1000
-local isBusy = false
-
--- Thêm cooldown punch
-local punchCooldown = 0.5
-local lastPunchTime = 0
+local speed, tween = 1000, nil
+local lastAttackTime = 0
+local attackCooldown = 0.6  -- Thêm thời gian giữa các đợt tấn công để tránh việc gọi liên tục
 
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
@@ -44,7 +41,7 @@ end
 
 local function destroyMob(uuid)
     for i = 1, 5 do
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+        local args = {
             [1] = {
                 [1] = {
                     ["Event"] = "EnemyDestroy",
@@ -52,14 +49,15 @@ local function destroyMob(uuid)
                 },
                 [2] = "\4"
             }
-        })
+        }
+        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
         task.wait(0.2)
     end
 end
 
 local function ariseMob(uuid)
     for i = 1, 5 do
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+        local args = {
             [1] = {
                 [1] = {
                     ["Event"] = "EnemyCapture",
@@ -67,75 +65,60 @@ local function ariseMob(uuid)
                 },
                 [2] = "\4"
             }
-        })
+        }
+        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
         task.wait(0.2)
     end
 end
 
 local function moveToAndPunch(mob)
-    if not mob or not mob:IsDescendantOf(workspace) then return end
-    isBusy = true
+    if tween then tween:Cancel() end
 
     local uuid = mob:GetAttribute("UUID") or mob.Name
     local distance = (mob.Position - rootPart.Position).Magnitude
     local tweenTime = distance / speed
 
     local finished = false
-    local tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
+    tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
     tween.Completed:Connect(function()
         finished = true
     end)
     tween:Play()
 
-    -- Timeout để tránh treo vĩnh viễn
-    local timeout = 3
-    local elapsed = 0
-    while not finished and elapsed < timeout do
-        if not mob or not mob.Parent then break end
-        elapsed += task.wait()
-    end
+    while not finished do task.wait() end
 
-    tween:Cancel()
+    -- Kiểm tra thời gian giữa các đợt tấn công
+    if tick() - lastAttackTime < attackCooldown then return end
+    lastAttackTime = tick()
 
-    -- Đảm bảo chỉ có 1 Heartbeat
     local connection
     connection = RunService.Heartbeat:Connect(function()
         if not mob or not mob.Parent then
             connection:Disconnect()
-            connection = nil
-            isBusy = false
             return
         end
 
         local hp = mob:GetAttribute("HP")
         if not hp or hp <= 0 then
             connection:Disconnect()
-            connection = nil
+
             if mob:GetAttribute("Model") == "JinWoo" or mob:GetAttribute("Model") == "Pucci" or mob:GetAttribute("Model") == "Denji" then
                 ariseMob(uuid)
             else
                 destroyMob(uuid)
             end
-            isBusy = false
+
             return
         end
 
-        -- Kiểm tra cooldown trước khi punch
-        if tick() - lastPunchTime >= punchCooldown then
-            punchMob(uuid)
-            lastPunchTime = tick()
-        end
+        punchMob(uuid)
+        task.wait(0.5)
     end)
 end
 
--- Chạy luồng chính, chờ xử lý xong rồi mới xử lý mob tiếp theo
-task.spawn(function()
-    while task.wait(0.3) do
-        if not isBusy then
-            local mob = findNearestMob()
-            if mob then
-                moveToAndPunch(mob)
-            end
-        end
+while task.wait(0.5) do  -- Thay đổi thời gian chờ ở đây để giảm tần suất tìm mob
+    local mob = findNearestMob()
+    if mob then
+        moveToAndPunch(mob)
     end
-end)
+end
