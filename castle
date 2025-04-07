@@ -21,7 +21,7 @@ local function joinCastle()
     ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
 end
 
--- Kiểm tra điều kiện teleport về lobby ở Floor 30
+-- Kiểm tra điều kiện teleport về lobby ở Floor 30 hoặc Floor 31
 spawn(function()
     while true do
         if LocalPlayer.Character then
@@ -31,6 +31,7 @@ spawn(function()
                     :WaitForChild("UpContanier")
                     :WaitForChild("Room").Text
 
+                -- Kiểm tra Floor 30/100
                 if tostring(roomText):find("Floor: 30/100") and not checking then
                     checking = true
 
@@ -53,6 +54,13 @@ spawn(function()
                             end)
                         end
                     end
+                end
+
+                -- Kiểm tra Floor 31/100
+                if tostring(roomText):find("Floor: 31/100") and not checking then
+                    checking = true
+                    task.wait(3)
+                    TeleportService:Teleport(lobbyPlaceId)
                 end
             end)
         end
