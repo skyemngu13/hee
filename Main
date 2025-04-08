@@ -76,6 +76,11 @@ local toggleList = {
         Name = "Auto Join Castle",  -- 👈 Toggle mới
         Key = "AutoJoinCastle",
         Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/castle"
+    },
+    {
+        Name = "Auto Destroy", 
+        Key = "AutoDestroy",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/destroy"
     }
 }
 
