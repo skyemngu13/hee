@@ -1,0 +1,63 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local enemies = workspace.__Main.__Enemies.Server  -- Vị trí chứa kẻ thù
+
+local mapId = "7"  -- ID bản đồ
+local targetMap = enemies:FindFirstChild(mapId)
+
+if not targetMap then
+    return  -- Nếu không tìm thấy bản đồ, kết thúc script
+end
+
+-- Đảm bảo RemoteEvent tấn công đã sẵn sàng
+local dataRemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+-- Hàm tính khoảng cách giữa hai điểm
+local function getDistance(part1, part2)
+    return (part1.Position - part2.Position).Magnitude
+end
+
+-- Vòng lặp để tự động tấn công kẻ thù gần nhất
+while true do
+    local closestEnemy = nil
+    local minDistance = math.huge  -- Khởi tạo khoảng cách tối thiểu rất lớn
+    
+    -- Kiểm tra tất cả các Part trong targetMap
+    for _, part in pairs(targetMap:GetChildren()) do
+        if part:IsA("Part") then
+            -- UUID của enemy được lưu trong tên của Part
+            local enemyUUID = part.Name
+            if enemyUUID and enemyUUID ~= "" then
+                -- Tính khoảng cách giữa nhân vật và enemy
+                local distance = getDistance(rootPart, part)
+                
+                -- Nếu khoảng cách ngắn hơn, cập nhật kẻ thù gần nhất
+                if distance < minDistance then
+                    closestEnemy = enemyUUID
+                    minDistance = distance
+                end
+            end
+        end
+    end
+
+    -- Nếu tìm thấy kẻ thù gần nhất, tấn công
+    if closestEnemy then
+        -- Gọi RemoteEvent để tấn công kẻ thù gần nhất
+        local args = {
+            [1] = {
+                [1] = {
+                    ["Event"] = "PunchAttack",
+                    ["Enemy"] = closestEnemy
+                },
+                [2] = "\4"  -- Tham số này có thể tùy chỉnh theo yêu cầu
+            }
+        }
+        -- Gửi yêu cầu tấn công
+        dataRemoteEvent:FireServer(unpack(args))
+    end
+    
+    -- Delay để tránh gọi quá nhanh
+    task.wait(0.3)  -- Điều chỉnh giá trị này nếu cần thiết
+end
