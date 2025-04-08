@@ -14,7 +14,7 @@ repeat task.wait(1) until Player:GetAttribute("Loaded") == true
 local autoClicking = true
 
 -- Vòng lặp AutoClick với delay hợp lý
-while wait(0.1) do
+while wait(0.3) do
     -- Nếu AutoClick đang bị tắt thì bật lại
     if Player:GetAttribute("AutoClick") ~= true then
         Player:SetAttribute("AutoClick", true)
