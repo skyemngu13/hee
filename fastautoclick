@@ -75,5 +75,5 @@ while true do
     end
     
     -- Delay để tránh gọi quá nhanh
-    task.wait(0.2)  -- Điều chỉnh giá trị này nếu cần thiết
+    task.wait(0.5)  -- Điều chỉnh giá trị này nếu cần thiết
 end
