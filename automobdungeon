@@ -8,7 +8,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace.__Main.__Enemies.Server
 
-local speed = 1000
+local speed = 500
 local tween = nil
 local reachedMob = nil
 
