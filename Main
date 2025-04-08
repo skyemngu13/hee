@@ -43,8 +43,8 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 💡 + Lưu setting khi telepoint
 ⚔️ + Arise đang có "Jinwoo"-"Pucci"-"Denji"
 ⛩️ + Check double "bú sjw N 🤑"
-🌡 + Fix ping cao 🗿
-+++ Add auto click
+👉 + Fast auto click(test)
+✅️ - Anti afk đã được bật
 ]])
 
 local MainTab = Window:MakeTab({
@@ -135,7 +135,7 @@ MiscTab:AddToggle({
 
                     -- Nếu không có gamepass AutoClicker thì delay lâu hơn
                     if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
-                        task.wait(0.4)
+                        task.wait(0.2)
                     end
 
                     -- Nếu bị tắt thì tự bật lại
