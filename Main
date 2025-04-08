@@ -165,6 +165,27 @@ MiscTab:AddToggle({
 })
 
 MiscTab:AddToggle({
+    Name = "Auto Attack",  -- Toggle Auto Attack
+    Default = settings["AutoAttack"] or false,
+    Callback = function(val)
+        settings["AutoAttack"] = val
+        saveSettings()
+
+        if val then
+            -- Chạy script Auto Attack từ URL khi toggle bật
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/auto%20attack"))()
+                end)
+            end)
+        else
+            -- Tắt Auto Attack khi toggle tắt
+            -- Bạn có thể thêm logic để dừng script Auto Attack nếu cần
+        end
+    end
+})
+
+MiscTab:AddToggle({
     Name = "Auto Load Script",
     Default = settings["AutoLoadScript"] or false,
     Callback = function(val)
