@@ -91,7 +91,7 @@ local function moveToMob(mob)
             end
 
             -- Thêm độ trễ 0.5s sau khi tiêu diệt hoặc hồi sinh mob
-            task.wait(1) 
+            task.wait(0.2) 
 
             reachedMob = nil
         end
