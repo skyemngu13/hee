@@ -62,7 +62,7 @@ local function checkAndHandleNearestMob()
                         }
                     }
                     remote:FireServer(unpack(args))
-                    task.wait(0.3)
+                    task.wait(0.1)
                 end
             end
         else
@@ -79,7 +79,7 @@ local function checkAndHandleNearestMob()
                         }
                     }
                     remote:FireServer(unpack(args))
-                    task.wait(0.3)
+                    task.wait(0.1)
                 end
             end
         end
