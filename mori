@@ -19,6 +19,15 @@ local speed = 1000
 local tween = nil
 local isBusy = false
 
+-- Tắt va chạm (noclip)
+local function enableNoClip()
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+end
+
 -- Tìm mob gần nhất còn sống và có Scale = 2
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
@@ -130,9 +139,12 @@ local function moveToMob(mob)
     end)
 end
 
+-- Bật chế độ noclip
+enableNoClip()
+
 -- Vòng lặp chính
 while true do
-    task.wait(0.1)
+    task.wait(0.3)
     if not isBusy then
         local mob = findNearestMob()
         if mob then
