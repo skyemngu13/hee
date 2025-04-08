@@ -46,6 +46,8 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 👉 + Fast auto click(test)
 👉 + Auto load script
 ✅️ - Anti afk đã được bật
+👉 + Auto Attack
+🔧 - fix farm mori nhưng vẫn dùng tween
 ]])
 
 local MainTab = Window:MakeTab({
