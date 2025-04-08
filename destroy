@@ -1,30 +1,68 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local workspace = game:GetService("Workspace")
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 
--- Lấy danh sách mob trong Server
-local enemies = workspace.__Main.__Enemies.Server
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
 
--- Destroy mob
-local function destroyMob(uuid)
-    for i = 1, 5 do
-        local args = { [1] = { [1] = { ["Event"] = "EnemyDestroy", ["Enemy"] = uuid }, [2] = "\4" } }
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.2) -- Delay 0.2s giữa các lần gọi
+local enemies = Workspace.__Main.__Enemies.Server
+local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+-- Hàm tính mob gần nhất
+local function getNearestMob()
+    local nearestMob, shortestDistance = nil, math.huge
+
+    local function checkFolder(folder)
+        for _, mob in pairs(folder:GetChildren()) do
+            if mob:IsA("Part") then
+                local distance = (mob.Position - hrp.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    nearestMob = mob
+                end
+            end
+        end
     end
+
+    -- Duyệt qua tất cả các map
+    for i = 1, 7 do
+        local folder = enemies:FindFirstChild(tostring(i))
+        if folder then
+            checkFolder(folder)
+        end
+    end
+
+    -- Duyệt các mob ngoài cùng
+    checkFolder(enemies)
+
+    return nearestMob
 end
 
--- Kiểm tra tất cả các mob trong Server để thực hiện destroy
-local function checkAllMobsToDestroy()
-    for _, mob in pairs(enemies:GetChildren()) do
+-- Gửi remote 5 lần nếu HP mob = 0
+local function checkAndAriseNearestMob()
+    local mob = getNearestMob()
+    if mob then
         local hp = mob:GetAttribute("HP")
-        if hp and hp <= 0 then
-            local uuid = mob:GetAttribute("UUID") or mob.Name
-            destroyMob(uuid)
+        if not hp or hp <= 0 then
+            for i = 1, 5 do
+                local args = {
+                    [1] = {
+                        [1] = {
+                            ["Event"] = "EnemyDestroy",
+                            ["Enemy"] = mob.Name
+                        },
+                        [2] = "\4"
+                    }
+                }
+                remote:FireServer(unpack(args))
+                task.wait(0.1)
+            end
         end
     end
 end
 
 -- Main loop
-while task.wait(1) do
-    checkAllMobsToDestroy()
+while task.wait(0.2) do
+    pcall(checkAndAriseNearestMob)
 end
