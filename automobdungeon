@@ -39,7 +39,7 @@ local function destroyMob(uuid)
     for i = 1, 5 do
         local args = { [1] = { [1] = { ["Event"] = "EnemyDestroy", ["Enemy"] = uuid }, [2] = "\4" } }
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.2)
+        task.wait(0.3)
     end
 end
 
@@ -48,7 +48,7 @@ local function ariseMob(uuid)
     for i = 1, 5 do
         local args = { [1] = { [1] = { ["Event"] = "EnemyCapture", ["Enemy"] = uuid }, [2] = "\4" } }
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.1)
+        task.wait(0.3)
     end
 end
 
