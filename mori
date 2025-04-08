@@ -91,7 +91,7 @@ local function moveToMob(mob)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
-        -- Nếu mob không còn tồn tại, hủy connection và tween
+        -- Kiểm tra mob và xem có còn sống khi đến nơi không
         if not mob or not mob.Parent then
             connection:Disconnect()
             if tween then tween:Cancel() end
@@ -144,7 +144,7 @@ enableNoClip()
 
 -- Vòng lặp chính
 while true do
-    task.wait(0.3)
+    task.wait(0.1)
     if not isBusy then
         local mob = findNearestMob()
         if mob then
