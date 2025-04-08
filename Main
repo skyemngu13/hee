@@ -44,6 +44,7 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 ⚔️ + Arise đang có "Jinwoo"-"Pucci"-"Denji"
 ⛩️ + Check double "bú sjw N 🤑"
 👉 + Fast auto click(test)
+👉 + Auto load script
 ✅️ - Anti afk đã được bật
 ]])
 
@@ -152,6 +153,21 @@ MiscTab:AddToggle({
         else
             -- Dừng AutoClick khi toggle tắt
             autoClicking = false
+        end
+    end
+})
+
+MiscTab:AddToggle({
+    Name = "Auto Load Script",
+    Default = settings["AutoLoadScript"] or false,
+    Callback = function(val)
+        settings["AutoLoadScript"] = val
+        saveSettings()
+
+        if val then
+            queue_on_teleport([[
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/Baylac2006/memaybeo/refs/heads/main/memaybeo'))()
+            ]])
         end
     end
 })
