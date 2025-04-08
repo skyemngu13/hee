@@ -10,16 +10,12 @@ local enemies = workspace.__Main.__Enemies.Server
 
 local mapId = "7"
 local targetMap = enemies:FindFirstChild(mapId)
-if not targetMap then
-    warn("Không tìm thấy map: " .. mapId)
-    return
-end
+if not targetMap then return end
 
 local speed = 1000
 local tween = nil
 local isBusy = false
 
--- Tìm mob gần nhất còn sống và có Scale = 2
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
     for _, mob in pairs(targetMap:GetChildren()) do
@@ -35,9 +31,8 @@ local function findNearestMob()
     return nearest
 end
 
--- Gửi lệnh tiêu diệt mob
 local function destroyMob(uuid)
-    for i = 1, 5 do
+    for _ = 1, 5 do
         local args = {
             [1] = {
                 [1] = {
@@ -51,7 +46,6 @@ local function destroyMob(uuid)
     end
 end
 
--- Tween tới mob
 local function moveToMob(mob)
     if not mob or not mob.Parent then 
         isBusy = false 
@@ -114,7 +108,6 @@ local function moveToMob(mob)
     end)
 end
 
--- Vòng lặp chính
 while true do
     task.wait(0.3)
     if not isBusy then
