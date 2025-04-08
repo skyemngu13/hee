@@ -1,29 +1,26 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Player = game:GetService("Players").LocalPlayer
-local _ = script.Parent
-local SharedModules = ReplicatedStorage.SharedModules
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local SharedModules = ReplicatedStorage:WaitForChild("SharedModules")
 
-require(SharedModules.Others.GuiFunctions)
-local WeaponsModule = require(SharedModules.WeaponsModule)
+-- Load các module an toàn
+local GuiFunctions = require(SharedModules:WaitForChild("Others"):WaitForChild("GuiFunctions"))
+local WeaponsModule = require(SharedModules:WaitForChild("WeaponsModule"))
 
--- Chờ player load xong
+-- Đảm bảo Player đã load xong
 repeat task.wait(1) until Player:GetAttribute("Loaded") == true
 
--- Bắt đầu vòng lặp auto click
-while true do
-    task.wait(0.1)
+-- Biến điều khiển AutoClick
+local autoClicking = true
 
-    -- Nếu không có gamepass AutoClicker thì delay lâu hơn
-    if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
-        task.wait(0.4)
-    end
-
-    -- Nếu bị tắt thì tự bật lại
+-- Vòng lặp AutoClick với delay hợp lý
+while wait(0.1) do
+    -- Nếu AutoClick đang bị tắt thì bật lại
     if Player:GetAttribute("AutoClick") ~= true then
         Player:SetAttribute("AutoClick", true)
     end
 
-    -- Gọi Click
+    -- Gọi Click liên tục
     WeaponsModule.Click({
         ["KeyCode"] = Enum.KeyCode.ButtonX
     }, false, nil, true)
