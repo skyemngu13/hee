@@ -184,6 +184,88 @@ task.spawn(function()
     end
 end)
 
+-- Thêm Toggle cho tính năng Auto Attack
+MiscTab:AddToggle({
+    Name = "Auto Attack",  -- Toggle mới
+    Default = settings["AutoAttack"] or false,
+    Callback = function(val)
+        settings["AutoAttack"] = val
+        saveSettings()
+
+        if val then
+            -- Bắt đầu Auto Attack khi toggle bật
+            task.spawn(function()
+                while settings["AutoAttack"] do
+                    local closestEnemy = nil
+                    local minDistance = math.huge  -- Khởi tạo khoảng cách tối thiểu rất lớn
+
+                    -- Kiểm tra tất cả các map từ 1 đến 7
+                    for mapId = 1, 7 do
+                        local targetMap = enemies:FindFirstChild(tostring(mapId))  -- Tìm map theo ID
+                        if targetMap then
+                            -- Kiểm tra tất cả các Part trong targetMap
+                            for _, part in pairs(targetMap:GetChildren()) do
+                                if part:IsA("Part") then
+                                    -- UUID của enemy được lưu trong tên của Part
+                                    local enemyUUID = part.Name
+                                    if enemyUUID and enemyUUID ~= "" then
+                                        -- Tính khoảng cách giữa nhân vật và enemy
+                                        local distance = getDistance(rootPart, part)
+
+                                        -- Nếu khoảng cách ngắn hơn, cập nhật kẻ thù gần nhất
+                                        if distance < minDistance then
+                                            closestEnemy = enemyUUID
+                                            minDistance = distance
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    -- Kiểm tra trong __Enemies.Server (ngoài các map)
+                    for _, part in pairs(enemies:GetChildren()) do
+                        if part:IsA("Part") then
+                            local enemyUUID = part.Name
+                            if enemyUUID and enemyUUID ~= "" then
+                                -- Tính khoảng cách giữa nhân vật và enemy
+                                local distance = getDistance(rootPart, part)
+
+                                -- Nếu khoảng cách ngắn hơn, cập nhật kẻ thù gần nhất
+                                if distance < minDistance then
+                                    closestEnemy = enemyUUID
+                                    minDistance = distance
+                                end
+                            end
+                        end
+                    end
+
+                    -- Nếu tìm thấy kẻ thù gần nhất, tấn công
+                    if closestEnemy then
+                        -- Gọi RemoteEvent để tấn công kẻ thù gần nhất
+                        local args = {
+                            [1] = {
+                                [1] = {
+                                    ["Event"] = "PunchAttack",
+                                    ["Enemy"] = closestEnemy
+                                },
+                                [2] = "\4"  -- Tham số này có thể tùy chỉnh theo yêu cầu
+                            }
+                        }
+                        -- Gửi yêu cầu tấn công
+                        dataRemoteEvent:FireServer(unpack(args))
+                    end
+
+                    -- Delay để tránh gọi quá nhanh
+                    task.wait(0.4)  -- Điều chỉnh giá trị này nếu cần thiết
+                end
+            end)
+        else
+            -- Dừng Auto Attack khi toggle tắt
+        end
+    end
+})
+
 -- Anti-AFK Script (Auto Execute Version)
 local vu = game:GetService("VirtualUser")
 game:GetService("Players").LocalPlayer.Idled:Connect(function()
