@@ -1,86 +1,77 @@
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
 local speed = 1000
 local tween = nil
-local reachedMob = nil
-local heartbeatConnection = nil
-
--- Luôn cập nhật lại rootPart khi nhân vật respawn
-local function getRootPart()
-    local char = player.Character or player.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart")
-end
+local isBusy = false
+local tweenConnection = nil
+local currentMob = nil -- lưu mob hiện tại
 
 -- Tìm mob gần nhất
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
-    local rootPart = getRootPart()
-
     for _, mob in pairs(enemies:GetChildren()) do
-        local hp = mob:GetAttribute("HP")
-        if hp and hp > 0 and mob:IsA("Model") and mob:FindFirstChild("HumanoidRootPart") then
-            local dist = (mob.HumanoidRootPart.Position - rootPart.Position).Magnitude
-            if dist < minDist then
-                minDist = dist
-                nearest = mob
+        if mob:IsA("Part") then
+            local hp = mob:GetAttribute("HP")
+            if hp and hp > 0 then
+                local dist = (mob.Position - rootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearest = mob
+                end
             end
         end
     end
-
     return nearest
 end
 
 -- Di chuyển đến mob
 local function moveToMob(mob)
+    if not mob or not mob:IsDescendantOf(workspace) then 
+        isBusy = false 
+        currentMob = nil
+        return 
+    end
+
+    local hp = mob:GetAttribute("HP")
+    if not hp or hp <= 0 then 
+        isBusy = false 
+        currentMob = nil
+        return 
+    end
+
+    isBusy = true
+    currentMob = mob
+
     if tween then tween:Cancel() end
-    if heartbeatConnection then heartbeatConnection:Disconnect() end
+    if tweenConnection then tweenConnection:Disconnect() end
 
-    local rootPart = getRootPart()
-    local targetPos = mob:FindFirstChild("HumanoidRootPart")
-    if not targetPos then return end
-
-    local distance = (targetPos.Position - rootPart.Position).Magnitude
-    local tweenTime = distance / speed
+    local offset = (mob.Position - rootPart.Position).Unit * -4
+    local targetPosition = mob.Position + offset + Vector3.new(0, 3, 0)
+    local distance = (targetPosition - rootPart.Position).Magnitude
+    local tweenTime = math.max(distance / speed, 0.1)
 
     tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {
-        CFrame = targetPos.CFrame
+        CFrame = CFrame.new(targetPosition, mob.Position)
     })
     tween:Play()
 
-    heartbeatConnection = RunService.Heartbeat:Connect(function()
-        if not mob or not mob.Parent then
-            heartbeatConnection:Disconnect()
-            reachedMob = nil
-            return
-        end
-
-        local hp = mob:GetAttribute("HP")
-        if not hp or hp <= 0 then
-            heartbeatConnection:Disconnect()
-            reachedMob = nil
-            task.wait(0.2)
-        end
-    end)
-
-    tween.Completed:Connect(function()
-        if not reachedMob then
-            reachedMob = mob
-        end
+    tweenConnection = tween.Completed:Once(function()
+        isBusy = false
     end)
 end
 
 -- Vòng lặp chính
 while task.wait(0.3) do
-    if not reachedMob then
+    if not isBusy then
         local mob = findNearestMob()
-        if mob then
+        -- Nếu mob mới khác mob cũ thì mới move
+        if mob and mob ~= currentMob then
             moveToMob(mob)
         end
     end
