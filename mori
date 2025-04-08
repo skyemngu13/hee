@@ -1,4 +1,3 @@
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -26,7 +25,7 @@ local function findFurthestMob()
 	return furthest
 end
 
--- Gửi destroy khi HP mob đã bằng 0
+-- Gửi destroy khi HP mob bằng 0
 local function destroyMob(uuid)
 	for i = 1, 4 do
 		local args = {
@@ -43,34 +42,27 @@ local function destroyMob(uuid)
 	end
 end
 
--- Fake teleport nhân vật (tránh anti-tele)
-local function teleportCharacter(targetCFrame)
-	local characterParts = {}
-	for _, part in pairs(character:GetDescendants()) do
-		if part:IsA("BasePart") and part ~= rootPart then
-			table.insert(characterParts, part)
-		end
-	end
+-- Bay đến mob bằng velocity
+local function velocityTo(targetPosition)
+	local direction = (targetPosition - rootPart.Position).Unit
+	local distance = (targetPosition - rootPart.Position).Magnitude
+	local speed = 250  -- Tùy game, có thể tăng nếu muốn bay nhanh
 
-	local offset = targetCFrame.Position - rootPart.Position
+	local travelTime = distance / speed
 
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then humanoid.PlatformStand = true end
+	-- Đặt vận tốc hướng đến mob
+	rootPart.AssemblyLinearVelocity = direction * speed
 
-	rootPart.CFrame = targetCFrame
-	for _, part in ipairs(characterParts) do
-		part.CFrame = part.CFrame + offset
-	end
-
-	task.delay(0.2, function()
-		if humanoid then humanoid.PlatformStand = false end
+	-- Dừng lại sau khi bay xong
+	task.delay(travelTime, function()
+		rootPart.AssemblyLinearVelocity = Vector3.zero
 	end)
 end
 
--- Teleport tới mob, không destroy cho đến khi mob chết
+-- Theo dõi mob và destroy khi chết
 local function moveToAndWatch(mob)
 	local uuid = mob:GetAttribute("UUID") or mob.Name
-	teleportCharacter(mob.CFrame)
+	velocityTo(mob.Position)
 
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
