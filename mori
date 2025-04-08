@@ -53,12 +53,18 @@ end
 
 -- Tween tới mob
 local function moveToMob(mob)
-    if not mob or not mob.Parent then isBusy = false return end
+    if not mob or not mob.Parent then 
+        isBusy = false 
+        return 
+    end
 
     local uuid = mob:GetAttribute("UUID") or mob.Name
     local hp = mob:GetAttribute("HP")
     local scale = mob:GetAttribute("Scale")
-    if not hp or hp <= 0 or scale ~= 2 then isBusy = false return end
+    if not hp or hp <= 0 or scale ~= 2 then 
+        isBusy = false 
+        return 
+    end
 
     isBusy = true
     if tween then tween:Cancel() end
@@ -76,6 +82,7 @@ local function moveToMob(mob)
 
     local connection
     connection = RunService.Heartbeat:Connect(function()
+        -- Nếu mob không còn tồn tại, hủy connection và tween
         if not mob or not mob.Parent then
             connection:Disconnect()
             if tween then tween:Cancel() end
@@ -83,16 +90,16 @@ local function moveToMob(mob)
             return
         end
 
+        -- Nếu mob chết, hủy tween và thực hiện tiêu diệt mob
         local currentHP = mob:GetAttribute("HP")
         if not currentHP or currentHP <= 0 then
             connection:Disconnect()
             if tween then tween:Cancel() end
-
             task.spawn(function()
                 destroyMob(uuid)
             end)
 
-            -- Tìm mob mới và move luôn
+            -- Tìm mob tiếp theo và move tới đó
             local nextMob = findNearestMob()
             if nextMob then
                 moveToMob(nextMob)
@@ -102,13 +109,13 @@ local function moveToMob(mob)
         end
     end)
 
+    -- Kiểm tra nếu tween hoàn thành, đảm bảo mob còn sống
     tween.Completed:Connect(function()
         -- Nếu mob còn sống khi đến nơi, tiếp tục theo dõi
         if mob and mob.Parent then
             local currentHP = mob:GetAttribute("HP")
             if currentHP and currentHP > 0 then
                 -- Đợi đến khi nó chết rồi xử lý
-                -- đã xử lý trong Heartbeat nên không cần làm gì ở đây
                 return
             end
         end
