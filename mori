@@ -2,139 +2,101 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Camera = game.Workspace.CurrentCamera
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
-local enemies = workspace.__Main.__Enemies.Server:WaitForChild("7") -- Cập nhật thành Map 7
+local enemies = workspace.__Main.__Enemies.Server:WaitForChild("7")
 
-local speed, tween = 1000, nil
+local reachedMob = nil
 
--- 🔍 Tìm mob gần nhất còn sống và có Scale = 2
-local function findNearestMob()
-    local nearest, minDist = nil, math.huge
-    for _, mob in pairs(enemies:GetChildren()) do
-        local hp = mob:GetAttribute("HP")
-        local scale = mob:GetAttribute("Scale") -- Lấy giá trị Scale
-        if hp and hp > 0 and scale == 2 then -- Chỉ chọn mob có Scale = 2
-            local dist = (mob.Position - rootPart.Position).Magnitude
-            if dist < minDist then
-                minDist, nearest = dist, mob
-            end
-        end
-    end
-    return nearest
+-- Tìm mob xa nhất có HP > 0 và Scale = 2
+local function findFurthestMob()
+	local furthest, maxDist = nil, 0
+	for _, mob in pairs(enemies:GetChildren()) do
+		local hp = mob:GetAttribute("HP")
+		local scale = mob:GetAttribute("Scale")
+		if hp and hp > 0 and scale == 2 then
+			local dist = (mob.Position - rootPart.Position).Magnitude
+			if dist > maxDist then
+				maxDist, furthest = dist, mob
+			end
+		end
+	end
+	return furthest
 end
 
--- 👊 Gửi remote PunchAttack
-local function punchMob(uuid)
-    local args = {
-        [1] = {
-            [1] = {
-                ["Event"] = "PunchAttack",
-                ["Enemy"] = uuid
-            },
-            [2] = "\4"
-        }
-    }
-    ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-end
-
--- 💥 Gửi remote EnemyDestroy 3 lần (delay 0.1s)
+-- Gửi destroy khi HP mob đã bằng 0
 local function destroyMob(uuid)
-    for i = 1, 4 do
-        local args = {
-            [1] = {
-                [1] = {
-                    ["Event"] = "EnemyDestroy",
-                    ["Enemy"] = uuid
-                },
-                [2] = "\4"
-            }
-        }
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.2)
-    end
+	for i = 1, 4 do
+		local args = {
+			[1] = {
+				[1] = {
+					["Event"] = "EnemyDestroy",
+					["Enemy"] = uuid
+				},
+				[2] = "\4"
+			}
+		}
+		ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
+		task.wait(0.2)
+	end
 end
 
--- ✈️ Bay tới mob và tấn công sau 0.5s
-local function moveToAndPunch(mob)
-    if tween then tween:Cancel() end
+-- Fake teleport nhân vật (tránh anti-tele)
+local function teleportCharacter(targetCFrame)
+	local characterParts = {}
+	for _, part in pairs(character:GetDescendants()) do
+		if part:IsA("BasePart") and part ~= rootPart then
+			table.insert(characterParts, part)
+		end
+	end
 
-    local uuid = mob:GetAttribute("UUID") or mob.Name
-    local distance = (mob.Position - rootPart.Position).Magnitude
-    local tweenTime = distance / speed
+	local offset = targetCFrame.Position - rootPart.Position
 
-    -- Bắt đầu tween bay đến mob
-    local finished = false
-    tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = mob.CFrame})
-    tween.Completed:Connect(function()
-        finished = true
-    end)
-    tween:Play()
-   
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if not mob or not mob.Parent then
-            connection:Disconnect()
-            return
-        end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then humanoid.PlatformStand = true end
 
-        local hp = mob:GetAttribute("HP")
-        if not hp or hp <= 0 then
-            connection:Disconnect()
-            destroyMob(uuid)
-            return
-        end
+	rootPart.CFrame = targetCFrame
+	for _, part in ipairs(characterParts) do
+		part.CFrame = part.CFrame + offset
+	end
 
-        punchMob(uuid)
-    end)
+	task.delay(0.2, function()
+		if humanoid then humanoid.PlatformStand = false end
+	end)
 end
 
-local mainFolder = game.Workspace:FindFirstChild("__Main")
-if mainFolder then
-    local world = mainFolder:FindFirstChild("__World")
-    if world then
-        world:Destroy()
-    end
+-- Teleport tới mob, không destroy cho đến khi mob chết
+local function moveToAndWatch(mob)
+	local uuid = mob:GetAttribute("UUID") or mob.Name
+	teleportCharacter(mob.CFrame)
+
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		if not mob or not mob.Parent then
+			connection:Disconnect()
+			reachedMob = nil
+			return
+		end
+
+		local hp = mob:GetAttribute("HP")
+		if hp and hp <= 0 then
+			connection:Disconnect()
+			destroyMob(uuid)
+			reachedMob = nil
+		end
+	end)
+
+	reachedMob = mob
 end
 
--- Xoá __Effects, __Rain, và __Ocean trong __Extra
-local extraFolder = game.Workspace:FindFirstChild("__Extra")
-if extraFolder then
-    local effects = extraFolder:FindFirstChild("Radars")
-    if effects then
-        effects:Destroy()
-    end
-
-    local rain = extraFolder:FindFirstChild("__Rain")
-    if rain then
-        rain:Destroy()
-    end
-
-    local ocean = extraFolder:FindFirstChild("__Ocean")
-    if ocean then
-        ocean:Destroy()
-    end
-end
-
--- 🔒 Khóa camera của người chơi tại vị trí cụ thể (5457, 641, -127) và nhìn xuống
-local function lockCamera()
-    local targetPosition = Vector3.new(5457, 641, -127) -- Vị trí muốn khóa camera
-    local cameraOffset = Vector3.new(0, 5, 20) -- Điều chỉnh góc nhìn (cao hơn và nhìn xuống)
-
-    Camera.CameraType = Enum.CameraType.Scriptable
-    Camera.CFrame = CFrame.new(targetPosition + cameraOffset, targetPosition) -- Cập nhật CFrame để nhìn xuống vị trí
-end
-
--- 🔁 Vòng lặp chính
+-- Vòng lặp chính
 while task.wait(0.2) do
-    -- Khóa camera ở vị trí cần thiết
-    lockCamera()
-
-    local mob = findNearestMob()
-    if mob then
-        moveToAndPunch(mob)
-    end
+	if not reachedMob then
+		local mob = findFurthestMob()
+		if mob then
+			moveToAndWatch(mob)
+		end
+	end
 end
