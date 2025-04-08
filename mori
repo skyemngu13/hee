@@ -15,7 +15,7 @@ if not targetMap then
     return
 end
 
-local speed = 1500
+local speed = 1000
 local tween = nil
 local busy = false
 
