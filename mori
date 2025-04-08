@@ -15,9 +15,9 @@ if not targetMap then
     return
 end
 
-local speed = 500
+local speed = 2000
 local tween = nil
-local reachedMob = nil
+local busy = false
 
 -- Tìm mob gần nhất có Scale = 2
 local function findNearestMob()
@@ -35,7 +35,7 @@ local function findNearestMob()
     return nearest
 end
 
--- Gửi destroy
+-- Gửi destroy (chạy song song)
 local function destroyMob(uuid)
     for i = 1, 5 do
         local args = {
@@ -48,15 +48,14 @@ local function destroyMob(uuid)
             }
         }
         ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-        task.wait(0.3)
+        task.wait(0.2)
     end
 end
 
 -- Di chuyển tới mob và theo dõi HP
 local function moveToMob(mob)
-    if tween then
-        tween:Cancel()
-    end
+    busy = true
+    if tween then tween:Cancel() end
 
     local uuid = mob:GetAttribute("UUID") or mob.Name
     local distance = (mob.Position - rootPart.Position).Magnitude
@@ -71,7 +70,7 @@ local function moveToMob(mob)
     connection = RunService.Heartbeat:Connect(function()
         if not mob or not mob.Parent then
             connection:Disconnect()
-            reachedMob = nil
+            busy = false
             return
         end
 
@@ -81,25 +80,20 @@ local function moveToMob(mob)
             task.spawn(function()
                 destroyMob(uuid)
             end)
-
-            task.wait(0.2)
-            reachedMob = nil
-        end
-    end)
-
-    tween.Completed:Connect(function()
-        if not reachedMob then
-            reachedMob = mob
+            busy = false
         end
     end)
 end
 
--- Vòng lặp chính
-while task.wait(0.2) do
-    if not reachedMob then
-        local mob = findNearestMob()
-        if mob then
-            moveToMob(mob)
+-- Vòng lặp chính: kiểm tra mỗi 0.1 giây
+task.spawn(function()
+    while true do
+        if not busy then
+            local mob = findNearestMob()
+            if mob then
+                moveToMob(mob)
+            end
         end
+        task.wait(0.2)
     end
-end
+end)
