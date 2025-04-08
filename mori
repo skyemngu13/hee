@@ -1,6 +1,4 @@
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
@@ -15,6 +13,8 @@ if not targetMap then return end
 local speed = 1000
 local tween = nil
 local isBusy = false
+local tweenConnection = nil
+local currentMob = nil -- lưu mob hiện tại
 
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
@@ -31,37 +31,26 @@ local function findNearestMob()
     return nearest
 end
 
-local function destroyMob(uuid)
-    for _ = 1, 5 do
-        local args = {
-            [1] = {
-                [1] = {
-                    ["Event"] = "EnemyDestroy",
-                    ["Enemy"] = uuid
-                },
-                [2] = "\4"
-            }
-        }
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
-    end
-end
-
 local function moveToMob(mob)
-    if not mob or not mob.Parent then 
+    if not mob or not mob:IsDescendantOf(workspace) then 
         isBusy = false 
+        currentMob = nil
         return 
     end
 
-    local uuid = mob:GetAttribute("UUID") or mob.Name
     local hp = mob:GetAttribute("HP")
     local scale = mob:GetAttribute("Scale")
     if not hp or hp <= 0 or scale ~= 2 then 
         isBusy = false 
+        currentMob = nil
         return 
     end
 
     isBusy = true
+    currentMob = mob
+
     if tween then tween:Cancel() end
+    if tweenConnection then tweenConnection:Disconnect() end
 
     local offset = (mob.Position - rootPart.Position).Unit * -4
     local targetPosition = mob.Position + offset + Vector3.new(0, 3, 0)
@@ -73,46 +62,16 @@ local function moveToMob(mob)
     })
     tween:Play()
 
-    tween.Completed:Connect(function()
-        if not mob or not mob.Parent then
-            isBusy = false
-            return
-        end
-
-        local currentHP = mob:GetAttribute("HP")
-        if currentHP and currentHP > 0 then
-            local waitConnection
-            waitConnection = RunService.Heartbeat:Connect(function()
-                local hp = mob:GetAttribute("HP")
-                if not hp or hp <= 0 then
-                    waitConnection:Disconnect()
-                    destroyMob(uuid)
-
-                    local nextMob = findNearestMob()
-                    if nextMob then
-                        moveToMob(nextMob)
-                    else
-                        isBusy = false
-                    end
-                end
-            end)
-        else
-            destroyMob(uuid)
-            local nextMob = findNearestMob()
-            if nextMob then
-                moveToMob(nextMob)
-            else
-                isBusy = false
-            end
-        end
+    tweenConnection = tween.Completed:Once(function()
+        isBusy = false
     end)
 end
 
-while true do
-    task.wait(0.3)
+while task.wait(0.3) do
     if not isBusy then
         local mob = findNearestMob()
-        if mob then
+        -- Nếu mob mới khác mob cũ thì mới move
+        if mob and mob ~= currentMob then
             moveToMob(mob)
         end
     end
