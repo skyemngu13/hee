@@ -47,10 +47,9 @@ local function checkAndHandleNearestMob()
         local model = mob:GetAttribute("Model")
         local scale = mob:GetAttribute("Scale")
 
-        -- Kiểm tra Model và Scale
-        if (model == "Jinwoo" or model == "Pucci" or model == "Denji") and scale >= 1 then
-            -- Arise nếu Model là Jinwoo, Pucci, Denji và Scale >= 2
-            if not hp or hp <= 0 then
+        if not hp or hp <= 0 then
+            if (model == "Jinwoo" or model == "Pucci" or model == "Denji") and scale and scale >= 2 then
+                -- Thực hiện Arise
                 for i = 1, 3 do
                     local args = {
                         [1] = {
@@ -64,10 +63,8 @@ local function checkAndHandleNearestMob()
                     remote:FireServer(unpack(args))
                     task.wait(0.1)
                 end
-            end
-        else
-            -- Destroy nếu không thoả mãn điều kiện Arise
-            if not hp or hp <= 0 then
+            else
+                -- Thực hiện Destroy
                 for i = 1, 3 do
                     local args = {
                         [1] = {
