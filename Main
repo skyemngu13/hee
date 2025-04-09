@@ -56,7 +56,7 @@ local InfoTab = Window:MakeTab({
 
 -- Thông báo cập nhật
 InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
-📌 - Version: v1.1
+📌 - Version: v1.2
 🆕 + Thêm Auto Join Castle
 🔧 + Cải thiện hiệu xuất tính năng
 💡 + Lưu setting khi telepoint
@@ -66,7 +66,8 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 👉 + Auto load script
 ✅️ - Anti afk đã được bật
 👉 + Auto Attack
-🔧 - fix farm mori nhưng vẫn dùng tween
+🔧 + New farm = tele
+------- mai test logic mới giảm tỉ lệ kick lên 90% -----
 ]])
 
 local MainTab = Window:MakeTab({
@@ -146,7 +147,7 @@ MainTab:AddTextbox({
     end
 })
 
--- Luồng xử lý Auto Farm Dungeon
+-- Luồng xử lý Auto Farm 
 task.spawn(function()
     local Players = game:GetService("Players")
     local player = Players.LocalPlayer
@@ -154,30 +155,30 @@ task.spawn(function()
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
-    -- Tìm mob gần nhất (HP > 0, Scale = 2)
+    -- Tìm mob gần nhất (HP > 0, Scale = 2 ưu tiên)
     local function findNearestMob()
-    local priorityMob, fallbackMob = nil, nil
-    local minDistPriority, minDistFallback = math.huge, math.huge
+        local priorityMob, fallbackMob = nil, nil
+        local minDistPriority, minDistFallback = math.huge, math.huge
 
-    for _, mob in pairs(enemies:GetChildren()) do
-        if mob:IsA("Part") then
-            local hp = mob:GetAttribute("HP")
-            local scale = mob:GetAttribute("Scale")
-            if hp and hp > 0 then
-                local dist = (mob.Position - rootPart.Position).Magnitude
-                if scale and scale >= 2 and dist < minDistPriority then
-                    minDistPriority = dist
-                    priorityMob = mob
-                elseif scale == 1 and dist < minDistFallback then
-                    minDistFallback = dist
-                    fallbackMob = mob
+        for _, mob in pairs(enemies:GetChildren()) do
+            if mob:IsA("Part") then
+                local hp = mob:GetAttribute("HP")
+                local scale = mob:GetAttribute("Scale")
+                if hp and hp > 0 then
+                    local dist = (mob.Position - rootPart.Position).Magnitude
+                    if scale and scale >= 2 and dist < minDistPriority then
+                        minDistPriority = dist
+                        priorityMob = mob
+                    elseif scale == 1 and dist < minDistFallback then
+                        minDistFallback = dist
+                        fallbackMob = mob
+                    end
                 end
             end
         end
-    end
 
-    return priorityMob or fallbackMob
-end
+        return priorityMob or fallbackMob
+    end
 
     -- Teleport gần mob
     local function teleportNearMob(mob)
@@ -189,8 +190,13 @@ end
 
     -- Xử lý mob
     local function handleMob(mob)
-        teleportNearMob(mob)
-        repeat task.wait() until not mob:IsDescendantOf(workspace) or (mob:GetAttribute("HP") or 0) <= 0
+        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+            local distance = (mob.Position - rootPart.Position).Magnitude
+            if distance > 7 then -- teleport nếu cách xa hơn 8 studs
+                teleportNearMob(mob)
+            end
+            task.wait(0.2)
+        end
         task.wait(dungeonDelay)
     end
 
@@ -252,7 +258,7 @@ task.spawn(function()
     local targetMap = enemies:FindFirstChild(mapId)
     if not targetMap then return end
 
-    -- Chỉ tìm mob Scale = 2 và HP > 0
+    -- Tìm mob gần nhất (Scale = 2 và HP > 0)
     local function findNearestMob()
         local nearestMob, minDist = nil, math.huge
 
@@ -288,10 +294,14 @@ task.spawn(function()
 
     -- Xử lý mob
     local function handleMob(mob)
-        teleportNearMob(mob)
-        repeat task.wait()
-        until not mob:IsDescendantOf(workspace) or (mob:GetAttribute("HP") or 0) <= 0
-        task.wait(dungeonDelay or 0.2)
+        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+            local distance = (mob.Position - rootPart.Position).Magnitude
+            if distance > 7 then
+                teleportNearMob(mob)
+            end
+            task.wait(0.2)
+        end
+        task.wait(delayAfterKill)
     end
 
     -- Vòng lặp chính
