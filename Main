@@ -402,6 +402,114 @@ MiscTab:AddToggle({
     end
 })
 
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+-- Xóa GUI cũ nếu đã tồn tại
+local old = game:GetService("CoreGui"):FindFirstChild("FPSPingDisplay")
+if old then
+	old:Destroy()
+end
+
+-- Tạo GUI mới
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FPSPingDisplay"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 999999
+screenGui.Enabled = true
+
+pcall(function()
+	screenGui.Parent = game:GetService("CoreGui")
+end)
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 240, 0, 100)
+mainFrame.Position = UDim2.new(0, 10, 0, 10)
+mainFrame.BackgroundTransparency = 1
+mainFrame.Parent = screenGui
+
+-- Tạo dòng text
+local function createRow(y)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(1, 0, 0, 30)
+	row.Position = UDim2.new(0, 0, 0, y)
+	row.BackgroundTransparency = 1
+	row.Parent = mainFrame
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = row
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0, 50, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 24
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextStrokeTransparency = 0.5
+	label.Parent = row
+
+	local value = label:Clone()
+	value.Size = UDim2.new(1, -50, 1, 0)
+	value.Parent = row
+
+	return label, value
+end
+
+local fpsLabel, fpsValue = createRow(0)
+local pingLabel, pingValue = createRow(30)
+local timeLabel, timeValue = createRow(60)
+
+fpsLabel.Text = "FPS:"
+pingLabel.Text = "Ping:"
+timeLabel.Text = "Time:"
+
+-- Hiệu ứng rainbow
+local function rainbow(offset)
+	local t = tick()
+	local r = 0.5 + 0.5 * math.sin(t * 3 + offset)
+	local g = 0.5 + 0.5 * math.sin(t * 3 + offset + 2)
+	local b = 0.5 + 0.5 * math.sin(t * 3 + offset + 4)
+	return Color3.new(r, g, b)
+end
+
+-- Luồng riêng để update UI
+task.spawn(function()
+	local fps, count, last = 0, 0, tick()
+
+	RunService.RenderStepped:Connect(function()
+		if not screenGui.Enabled then return end
+
+		count += 1
+		local now = tick()
+
+		if now - last >= 1 then
+			fps = count
+			count = 0
+			last = now
+
+			local pingStat = Stats:FindFirstChild("Network") and Stats.Network:FindFirstChild("ServerStatsItem")
+			local ping = pingStat and pingStat["Data Ping"]:GetValue() or 0
+			pingValue.Text = math.floor(ping + 0.5) .. " ms"
+			fpsValue.Text = tostring(fps)
+		end
+
+		local t = os.date("*t")
+		timeValue.Text = string.format("%02d:%02d:%02d", t.hour, t.min, t.sec)
+
+		-- Rainbow màu
+		fpsLabel.TextColor3 = rainbow(0)
+		fpsValue.TextColor3 = rainbow(1)
+		pingLabel.TextColor3 = rainbow(2)
+		pingValue.TextColor3 = rainbow(3)
+		timeLabel.TextColor3 = rainbow(4)
+		timeValue.TextColor3 = rainbow(5)
+	end)
+end)
+
 task.spawn(function()
     task.wait(1) -- Đảm bảo UI vẽ xong
 
