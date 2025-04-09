@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -14,8 +15,19 @@ local speed = 1000
 local tween = nil
 local isBusy = false
 local tweenConnection = nil
-local currentMob = nil -- lưu mob hiện tại
+local currentMob = nil
+local noclipConnection = nil
 
+-- Bật/tắt noclip cho toàn bộ part trong nhân vật
+local function setNoClip(state)
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not state
+        end
+    end
+end
+
+-- Tìm mob gần nhất thỏa HP > 0 và Scale == 2
 local function findNearestMob()
     local nearest, minDist = nil, math.huge
     for _, mob in pairs(targetMap:GetChildren()) do
@@ -31,6 +43,7 @@ local function findNearestMob()
     return nearest
 end
 
+-- Tween đến mob
 local function moveToMob(mob)
     if not mob or not mob:IsDescendantOf(workspace) then 
         isBusy = false 
@@ -51,11 +64,18 @@ local function moveToMob(mob)
 
     if tween then tween:Cancel() end
     if tweenConnection then tweenConnection:Disconnect() end
+    if noclipConnection then noclipConnection:Disconnect() end
 
     local offset = (mob.Position - rootPart.Position).Unit * -4
     local targetPosition = mob.Position + offset + Vector3.new(0, 3, 0)
     local distance = (targetPosition - rootPart.Position).Magnitude
     local tweenTime = math.max(distance / speed, 0.1)
+
+    -- Bật noclip liên tục trong lúc tween
+    setNoClip(true)
+    noclipConnection = RunService.Stepped:Connect(function()
+        setNoClip(true)
+    end)
 
     tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {
         CFrame = CFrame.new(targetPosition, mob.Position)
@@ -63,14 +83,19 @@ local function moveToMob(mob)
     tween:Play()
 
     tweenConnection = tween.Completed:Once(function()
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        setNoClip(false)
         isBusy = false
     end)
 end
 
+-- Vòng lặp chính
 while task.wait(0.3) do
     if not isBusy then
         local mob = findNearestMob()
-        -- Nếu mob mới khác mob cũ thì mới move
         if mob and mob ~= currentMob then
             moveToMob(mob)
         end
