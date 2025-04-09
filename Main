@@ -1,8 +1,27 @@
 repeat 
-    wait() 
-until game:IsLoaded() and game.Players.LocalPlayer and 
-      game.Workspace:FindFirstChild("__Extra") and 
-      game.Workspace:FindFirstChild("__Main")
+    task.wait() 
+until game:IsLoaded() 
+   and game.Players.LocalPlayer 
+   and workspace:FindFirstChild("__Extra") 
+   and workspace:FindFirstChild("__Main")
+
+-- Bypass anti-teleport trước khi load UI
+local replicated = game:GetService("ReplicatedStorage")
+local success, extraFunctionsModule = pcall(function()
+    return require(replicated:WaitForChild("SharedModules"):WaitForChild("ExtraFunctions"))
+end)
+
+if success and extraFunctionsModule then
+    local extraFunctions = extraFunctionsModule
+
+    if not getgenv()._original_GetPlayerSpeed then
+        getgenv()._original_GetPlayerSpeed = extraFunctions.GetPlayerSpeed
+
+        extraFunctions.GetPlayerSpeed = function(player)
+            return 999999
+        end
+    end
+end
 
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
 
@@ -227,40 +246,55 @@ task.spawn(function()
     local player = Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
     local rootPart = character:WaitForChild("HumanoidRootPart")
-    local enemies = workspace.__Main.__Enemies.Server
+    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
     local mapId = "7"
     local targetMap = enemies:FindFirstChild(mapId)
     if not targetMap then return end
 
+    -- Chỉ tìm mob Scale = 2 và HP > 0
     local function findNearestMob()
-        local nearest, minDist = nil, math.huge
+        local nearestMob, minDist = nil, math.huge
+
         for _, mob in pairs(targetMap:GetChildren()) do
-            local hp = mob:GetAttribute("HP")
-            local scale = mob:GetAttribute("Scale")
-            if hp and hp > 0 and scale == 2 then
-                local dist = (mob.Position - rootPart.Position).Magnitude
-                if dist < minDist then
-                    minDist, nearest = dist, mob
+            if mob:IsA("Part") then
+                local hp = mob:GetAttribute("HP")
+                local scale = mob:GetAttribute("Scale")
+                if hp and hp > 0 and scale == 2 then
+                    local dist = (mob.Position - rootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearestMob = mob
+                    end
                 end
             end
         end
-        return nearest
+
+        return nearestMob
     end
 
+    -- Teleport gần mob
     local function teleportNearMob(mob)
-        local direction = (rootPart.Position - mob.Position).Unit
+        if not mob:IsDescendantOf(workspace) then return end
+        local success, direction = pcall(function()
+            return (rootPart.Position - mob.Position).Unit
+        end)
+        if not success then return end
+
         local offset = direction * 8 + Vector3.new(0, 3, 0)
         local targetPos = mob.Position + offset
         rootPart.CFrame = CFrame.new(targetPos, mob.Position)
     end
 
+    -- Xử lý mob
     local function handleMob(mob)
         teleportNearMob(mob)
-        repeat task.wait() until not mob:IsDescendantOf(workspace) or (mob:GetAttribute("HP") or 0) <= 0
-        task.wait(delayAfterKill)
+        repeat task.wait()
+        until not mob:IsDescendantOf(workspace) or (mob:GetAttribute("HP") or 0) <= 0
+        task.wait(dungeonDelay or 0.2)
     end
 
+    -- Vòng lặp chính
     while true do
         if autoMori then
             local mob = findNearestMob()
@@ -368,9 +402,10 @@ MiscTab:AddToggle({
     end
 })
 
--- Sau khi UI xong → chạy các script đã bật
 task.spawn(function()
-    task.wait(1) -- đảm bảo UI vẽ xong
+    task.wait(1) -- Đảm bảo UI vẽ xong
+
+    -- Chạy các script đã bật
     for _, t in ipairs(toggleList) do
         if settings[t.Key] then
             pcall(function()
@@ -384,21 +419,5 @@ end)
 local vu = game:GetService("VirtualUser")
 game:GetService("Players").LocalPlayer.Idled:Connect(function()
     vu:CaptureController()
-    vu:ClickButton2(Vector2.new(0,0))
-end)
-
--- Bypass Anti-Teleport (Luôn chạy song song như Anti-AFK)
-task.spawn(function()
-    local replicated = game:GetService("ReplicatedStorage")
-    local extraFunctions = require(replicated:WaitForChild("SharedModules"):WaitForChild("ExtraFunctions"))
-
-    if not getgenv()._original_GetPlayerSpeed then
-        getgenv()._original_GetPlayerSpeed = extraFunctions.GetPlayerSpeed
-
-        extraFunctions.GetPlayerSpeed = function(player)
-            return 999999
-        end
-
-        warn("✅ Đã bypass anti teleport")
-    end
+    vu:ClickButton2(Vector2.new(0, 0))
 end)
