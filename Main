@@ -267,7 +267,7 @@ task.spawn(function()
             if mob then
                 handleMob(mob)
             else
-                task.wait(0.5)
+                task.wait(0.2)
             end
         else
             task.wait(0.2)
