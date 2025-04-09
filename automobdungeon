@@ -105,7 +105,7 @@ local function moveToMob(mob)
 end
 
 -- Vòng lặp chính
-while task.wait(0.7) do
+while task.wait(1) do
     if not isBusy then
         local mob = findMobInRange()
         if mob and mob ~= currentMob then
