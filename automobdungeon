@@ -67,7 +67,7 @@ local function moveToMob(mob)
 end
 
 -- Vòng lặp chính
-while task.wait(0.3) do
+while task.wait(1) do
     if not isBusy then
         local mob = findNearestMob()
         -- Nếu mob mới khác mob cũ thì mới move
