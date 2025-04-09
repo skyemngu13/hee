@@ -13,7 +13,7 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "AutoHub"
 })
 
-local settingsFile = "autohub_settings.json"
+local settingsFile = "piahub.json"
 local HttpService = game:GetService("HttpService")
 
 -- Đọc settings
@@ -63,16 +63,6 @@ local toggleList = {
         Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/bypass"
     },
     {
-        Name = "Auto Kill Dungeon",
-        Key = "AutoKillDungeon",
-        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/automobdungeon"
-    },
-    {
-        Name = "Auto Farm Mori",
-        Key = "AutoFarmMori",
-        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/mori"
-    },
-    {
         Name = "Auto Join Castle",  -- 👈 Toggle mới
         Key = "AutoJoinCastle",
         Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/castle"
@@ -106,6 +96,178 @@ for _, t in ipairs(toggleList) do
         end
     })
 end
+
+MainTab:AddLabel("🕳️ Auto Farm Dungeon")
+
+local autodungeon = settings["Autofarmdungeon"] or false
+local dungeonDelay = settings["DungeonDelay"] or 0.5
+
+MainTab:AddToggle({
+    Name = "Auto Farm Dungeon",
+    Default = autodungeon,
+    Callback = function(val)
+        autodungeon = val
+        settings["Autofarmdungeon"] = val --he
+        saveSettings()  --  Lưu lại
+    end
+})
+
+
+MainTab:AddTextbox({
+    Name = "Delay giết quái Dungeon (giây)",
+    Default = tostring(dungeonDelay),
+    TextDisappear = false,
+    Callback = function(val)
+        local number = tonumber(val)
+        if number then
+            dungeonDelay = number
+            settings["DungeonDelay"] = number  -- <== Lưu vào settings
+            saveSettings()                     -- <== Gọi hàm lưu
+        end
+    end
+})
+
+-- Luồng xử lý Auto Farm Dungeon
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local rootPart = player.Character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace.__Main.__Enemies.Server
+
+    local function getDungeon()
+        for _, arena in pairs(enemies:GetChildren()) do
+            if arena.Name:lower():find("dungeon") then
+                return arena
+            end
+        end
+    end
+
+    local function findNearestDungeonMob(arena)
+        local nearest, minDist = nil, math.huge
+        for _, mob in pairs(arena:GetChildren()) do
+            if mob:IsA("BasePart") and mob:GetAttribute("HP") and mob:GetAttribute("HP") > 0 then
+                local dist = (mob.Position - rootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist, nearest = dist, mob
+                end
+            end
+        end
+        return nearest
+    end
+
+    local function teleportTo(mob)
+        local dir = (rootPart.Position - mob.Position).Unit
+        local offset = dir * 8 + Vector3.new(0, 3, 0)
+        rootPart.CFrame = CFrame.new(mob.Position + offset, mob.Position)
+    end
+
+    local function handleMob(mob)
+        teleportTo(mob)
+        repeat task.wait() until not mob:IsDescendantOf(workspace) or (mob:GetAttribute("HP") or 0) <= 0
+        task.wait(dungeonDelay)
+    end
+
+    while true do
+        if autoDungeon then
+            local dungeon = getDungeon()
+            if dungeon then
+                local mob = findNearestDungeonMob(dungeon)
+                if mob then
+                    handleMob(mob)
+                else
+                    task.wait(0.5)
+                end
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+MainTab:AddLabel("🌾 Auto Farm Mori")
+
+local autoMori = settings["AutoFarmMori"] or false
+local delayAfterKill = settings["DelayAfterKill"] or 0.5
+
+-- Toggle Auto Farm Mori
+MainTab:AddToggle({
+    Name = "Auto Farm Mori",
+    Default = autoMori,
+    Callback = function(val)
+        autoMori = val
+        settings["AutoFarmMori"] = val --he
+        saveSettings()  --  Lưu lại
+    end
+})
+
+-- Textbox để chỉnh delay sau khi giết mob
+MainTab:AddTextbox({
+    Name = "Delay sau khi giết mob (giây)",
+    Default = tostring(delayAfterKill),
+    TextDisappear = false,
+    Callback = function(val)
+        local number = tonumber(val)
+        if number then
+            delayAfterKill = number
+            settings["DelayAfterKill"] = number  -- <== Lưu vào settings
+            saveSettings()                       -- <== Gọi hàm lưu
+        end
+    end
+})
+
+-- Luồng xử lý Auto Farm Mori
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace.__Main.__Enemies.Server
+
+    local mapId = "7"
+    local targetMap = enemies:FindFirstChild(mapId)
+    if not targetMap then return end
+
+    local function findNearestMob()
+        local nearest, minDist = nil, math.huge
+        for _, mob in pairs(targetMap:GetChildren()) do
+            local hp = mob:GetAttribute("HP")
+            local scale = mob:GetAttribute("Scale")
+            if hp and hp > 0 and scale == 2 then
+                local dist = (mob.Position - rootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist, nearest = dist, mob
+                end
+            end
+        end
+        return nearest
+    end
+
+    local function teleportNearMob(mob)
+        local direction = (rootPart.Position - mob.Position).Unit
+        local offset = direction * 8 + Vector3.new(0, 3, 0)
+        local targetPos = mob.Position + offset
+        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
+    end
+
+    local function handleMob(mob)
+        teleportNearMob(mob)
+        repeat task.wait() until not mob:IsDescendantOf(workspace) or (mob:GetAttribute("HP") or 0) <= 0
+        task.wait(delayAfterKill)
+    end
+
+    while true do
+        if autoMori then
+            local mob = findNearestMob()
+            if mob then
+                handleMob(mob)
+            else
+                task.wait(0.5)
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
 
 -- Tạo Tab Misc với Toggle AutoClick (Tab này sẽ là tab thứ 3)
 local MiscTab = Window:MakeTab({
