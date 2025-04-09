@@ -218,3 +218,19 @@ game:GetService("Players").LocalPlayer.Idled:Connect(function()
     vu:CaptureController()
     vu:ClickButton2(Vector2.new(0,0))
 end)
+
+-- Bypass Anti-Teleport (Luôn chạy song song như Anti-AFK)
+task.spawn(function()
+    local replicated = game:GetService("ReplicatedStorage")
+    local extraFunctions = require(replicated:WaitForChild("SharedModules"):WaitForChild("ExtraFunctions"))
+
+    if not getgenv()._original_GetPlayerSpeed then
+        getgenv()._original_GetPlayerSpeed = extraFunctions.GetPlayerSpeed
+
+        extraFunctions.GetPlayerSpeed = function(player)
+            return 999999
+        end
+
+        warn("✅ Đã bypass anti teleport")
+    end
+end)
