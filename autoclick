@@ -3,25 +3,46 @@ local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local SharedModules = ReplicatedStorage:WaitForChild("SharedModules")
 
--- Load các module an toàn
-local GuiFunctions = require(SharedModules:WaitForChild("Others"):WaitForChild("GuiFunctions"))
-local WeaponsModule = require(SharedModules:WaitForChild("WeaponsModule"))
-
--- Đảm bảo Player đã load xong
-repeat task.wait(1) until Player:GetAttribute("Loaded") == true
-
--- Biến điều khiển AutoClick
-local autoClicking = true
-
--- Vòng lặp AutoClick với delay hợp lý
-while wait(0.3) do
-    -- Nếu AutoClick đang bị tắt thì bật lại
-    if Player:GetAttribute("AutoClick") ~= true then
-        Player:SetAttribute("AutoClick", true)
+-- Require an toàn
+local function safeRequire(module)
+    local ok, result = pcall(require, module)
+    if ok then
+        return result
     end
-
-    -- Gọi Click liên tục
-    WeaponsModule.Click({
-        ["KeyCode"] = Enum.KeyCode.ButtonX
-    }, false, nil, true)
+    return nil
 end
+
+-- Load module
+local function loadModules()
+    return {
+        GuiFunctions = safeRequire(SharedModules:WaitForChild("Others"):WaitForChild("GuiFunctions")),
+        WeaponsModule = safeRequire(SharedModules:WaitForChild("WeaponsModule")),
+    }
+end
+
+-- Chờ player load hoàn tất
+repeat task.wait() until Player:GetAttribute("Loaded") == true
+
+-- Bật AutoClick vĩnh viễn
+Player:SetAttribute("AutoClick", true)
+
+-- Tự động gọi Click liên tục
+task.spawn(function()
+    local modules = loadModules()
+
+    while true do
+        task.wait(0.4)
+
+        -- Nếu module bị mất do teleport, load lại
+        if not modules.WeaponsModule then
+            modules = loadModules()
+        end
+
+        -- Gọi hàm Click an toàn
+        pcall(function()
+            modules.WeaponsModule.Click({
+                ["KeyCode"] = Enum.KeyCode.ButtonX
+            }, false, nil, true)
+        end)
+    end
+end)
