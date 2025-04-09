@@ -8,11 +8,13 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
 local speed = 1000
+local RANGE = 5000 -- Phạm vi tìm mob
 local tween = nil
 local isBusy = false
 local tweenConnection = nil
-local currentMob = nil
 local noclipConnection = nil
+local monitorConnection = nil
+local currentMob = nil
 
 -- Bật/tắt noclip
 local function setNoClip(state)
@@ -23,15 +25,15 @@ local function setNoClip(state)
     end
 end
 
--- Tìm mob gần nhất
-local function findNearestMob()
-    local nearest, minDist = nil, math.huge
+-- Tìm mob còn sống trong RANGE
+local function findMobInRange()
+    local nearest, minDist = nil, RANGE
     for _, mob in pairs(enemies:GetChildren()) do
         if mob:IsA("Part") then
             local hp = mob:GetAttribute("HP")
             if hp and hp > 0 then
                 local dist = (mob.Position - rootPart.Position).Magnitude
-                if dist < minDist then
+                if dist <= minDist then
                     minDist = dist
                     nearest = mob
                 end
@@ -62,39 +64,50 @@ local function moveToMob(mob)
     if tween then tween:Cancel() end
     if tweenConnection then tweenConnection:Disconnect() end
     if noclipConnection then noclipConnection:Disconnect() end
+    if monitorConnection then monitorConnection:Disconnect() end
 
-    -- Tính vị trí đích
     local offset = (mob.Position - rootPart.Position).Unit * -4
     local targetPosition = mob.Position + offset + Vector3.new(0, 3, 0)
     local distance = (targetPosition - rootPart.Position).Magnitude
     local tweenTime = math.max(distance / speed, 0.1)
 
-    -- Bật noclip liên tục trong lúc tween
+    -- Noclip
     setNoClip(true)
     noclipConnection = RunService.Stepped:Connect(function()
         setNoClip(true)
     end)
 
-    -- Bắt đầu tween
+    -- Theo dõi mob trong lúc tween
+    monitorConnection = RunService.Heartbeat:Connect(function()
+        if not mob:IsDescendantOf(workspace) or mob:GetAttribute("HP") <= 0 then
+            if tween then tween:Cancel() end
+            if tweenConnection then tweenConnection:Disconnect() end
+            if noclipConnection then noclipConnection:Disconnect() end
+            if monitorConnection then monitorConnection:Disconnect() end
+            setNoClip(false)
+            isBusy = false
+            currentMob = nil
+        end
+    end)
+
+    -- Tween tới mob
     tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {
         CFrame = CFrame.new(targetPosition, mob.Position)
     })
     tween:Play()
 
     tweenConnection = tween.Completed:Once(function()
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
+        if monitorConnection then monitorConnection:Disconnect() end
+        if noclipConnection then noclipConnection:Disconnect() end
         setNoClip(false)
         isBusy = false
     end)
 end
 
 -- Vòng lặp chính
-while task.wait(1) do
+while task.wait(0.7) do
     if not isBusy then
-        local mob = findNearestMob()
+        local mob = findMobInRange()
         if mob and mob ~= currentMob then
             moveToMob(mob)
         end
