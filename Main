@@ -182,7 +182,7 @@ end
     -- Teleport gần mob
     local function teleportNearMob(mob)
         local direction = (rootPart.Position - mob.Position).Unit
-        local offset = direction * 8 + Vector3.new(0, 3, 0)
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
         local targetPos = mob.Position + offset
         rootPart.CFrame = CFrame.new(targetPos, mob.Position)
     end
@@ -281,7 +281,7 @@ task.spawn(function()
         end)
         if not success then return end
 
-        local offset = direction * 8 + Vector3.new(0, 3, 0)
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
         local targetPos = mob.Position + offset
         rootPart.CFrame = CFrame.new(targetPos, mob.Position)
     end
@@ -401,133 +401,6 @@ MiscTab:AddToggle({
         end
     end
 })
-
-local Setting = Window:MakeTab({
-    Name = "Setting",
-    Icon = "rbxassetid://95758233681936",
-    PremiumOnly = false
-})
-
-local toggleState = settings["showinfo"] or true
-
-local Toggle = Tab:AddToggle({
-    Name = "Show FPS/Ping",
-    Default = toggleState,  -- Sử dụng trạng thái đọc từ file
-    Callback = function(val)
-        if State then
-            screenGui.Enabled = true  -- Hiển thị UI
-        else
-            screenGui.Enabled = false  -- Ẩn UI
-          settings["showinfo"] = val --he
-          saveSettings()
-        end
-        
-        -- Lưu trạng thái toggle vào file
-        local dataToSave = {
-            toggleState = State
-        }
-        local jsonData = HttpService:JSONEncode(dataToSave)
-        writefile("fpsPingToggleState.json", jsonData)  -- Lưu trạng thái toggle vào file
-    end
-})
-
--- Các phần còn lại của mã FPS/Ping UI
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "FPSPingDisplay"
-screenGui.IgnoreGuiInset = true
-screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 999999
-pcall(function()
-    screenGui.Parent = game:GetService("CoreGui")
-end)
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 240, 0, 100)
-mainFrame.Position = UDim2.new(0, 10, 0, 10)
-mainFrame.BackgroundTransparency = 1
-mainFrame.Parent = screenGui
-
-local function createRow(yPosition)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 30)
-    row.Position = UDim2.new(0, 0, 0, yPosition)
-    row.BackgroundTransparency = 1
-    row.Parent = mainFrame
-
-    local layout = Instance.new("UIListLayout")
-    layout.FillDirection = Enum.FillDirection.Horizontal
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 4) -- Khoảng cách nhỏ giữa label và value
-    layout.Parent = row
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 50, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.SourceSansBold
-    label.TextSize = 24
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextStrokeTransparency = 0.5
-    label.Parent = row
-
-    local value = label:Clone()
-    value.Size = UDim2.new(1, -50, 1, 0)
-    value.Parent = row
-
-    return label, value
-end
-
-local fpsLabel, fpsValue = createRow(0)
-local pingLabel, pingValue = createRow(30)
-local timeLabel, timeValue = createRow(60)
-
-fpsLabel.Text = "FPS:"
-pingLabel.Text = "Ping:"
-timeLabel.Text = "Time:"
-
--- Rainbow hiệu ứng
-local function rainbow(offset)
-    local t = tick()
-    local r = 0.5 + 0.5 * math.sin(t * 3 + offset)
-    local g = 0.5 + 0.5 * math.sin(t * 3 + offset + 2)
-    local b = 0.5 + 0.5 * math.sin(t * 3 + offset + 4)
-    return Color3.new(r, g, b)
-end
-
--- FPS
-local fps = 0
-local count = 0
-local last = tick()
-
-RunService.RenderStepped:Connect(function()
-    count += 1
-    local now = tick()
-
-    if now - last >= 1 then
-        fps = count
-        count = 0
-        last = now
-
-        local pingStat = Stats:FindFirstChild("Network") and Stats.Network:FindFirstChild("ServerStatsItem")
-        local ping = pingStat and pingStat["Data Ping"]:GetValue() or 0
-        pingValue.Text = math.floor(ping + 0.5) .. " ms"
-        fpsValue.Text = tostring(fps)
-    end
-
-    -- Time
-    local t = os.date("*t")
-    timeValue.Text = string.format("%02d:%02d:%02d", t.hour, t.min, t.sec)
-
-    -- Đổi màu
-    fpsLabel.TextColor3 = rainbow(0)
-    fpsValue.TextColor3 = rainbow(1)
-    pingLabel.TextColor3 = rainbow(2)
-    pingValue.TextColor3 = rainbow(3)
-    timeLabel.TextColor3 = rainbow(4)
-    timeValue.TextColor3 = rainbow(5)
-end)
 
 task.spawn(function()
     task.wait(1) -- Đảm bảo UI vẽ xong
