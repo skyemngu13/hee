@@ -26,7 +26,7 @@ end
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
 
 local Window = OrionLib:MakeWindow({
-    Name = "Pịa Hub - Pịa xào me",  -- Thêm phần text "Pịa xào me" phía trước
+    Name = "Pịa Hub - Vãi Pịa 💩",  -- Thêm phần text "Pịa xào me" phía trước
     HidePremium = false,
     SaveConfig = false,
     ConfigFolder = "AutoHub"
@@ -65,7 +65,7 @@ InfoTab:AddParagraph("🛠️ Cập nhật mới nhất", [[
 ✅️ - Anti afk đã được bật
 🔧 + New farm = tele
 👉 --Lưu ý bật Auto destroy mới arise đc mấy con kia---
-------- mai test logic mới giảm tỉ lệ kick lên 90% -----
+ + Add teleport
 ]])
 
 local MainTab = Window:MakeTab({
