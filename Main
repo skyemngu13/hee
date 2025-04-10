@@ -437,6 +437,24 @@ MiscTab:AddToggle({
     end
 })
 
+MiscTab:AddToggle({
+    Name = "Giảm lag", -- Tên toggle
+    Default = settings["SpecialScript"] or false,
+    Callback = function(val)
+        settings["SpecialScript"] = val
+        saveSettings()
+
+        if val then
+            -- Chạy script khi bật
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/giamlag"))()
+                end)
+            end)
+        end
+    end
+})
+
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 
