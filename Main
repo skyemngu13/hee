@@ -155,30 +155,30 @@ task.spawn(function()
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
-    -- Tìm mob gần nhất (HP > 0, Scale = 2 ưu tiên)
+    -- Tìm mob gần nhất (HP > 0, Scale >= 2 ưu tiên, nếu không có thì đánh Scale >= 1)
     local function findNearestMob()
-        local priorityMob, fallbackMob = nil, nil
-        local minDistPriority, minDistFallback = math.huge, math.huge
+    local priorityMob, fallbackMob = nil, nil
+    local minDistPriority, minDistFallback = math.huge, math.huge
 
-        for _, mob in pairs(enemies:GetChildren()) do
-            if mob:IsA("Part") then
-                local hp = mob:GetAttribute("HP")
-                local scale = mob:GetAttribute("Scale")
-                if hp and hp > 0 then
-                    local dist = (mob.Position - rootPart.Position).Magnitude
-                    if scale and scale >= 2 and dist < minDistPriority then
-                        minDistPriority = dist
-                        priorityMob = mob
-                    elseif scale == 1 and dist < minDistFallback then
-                        minDistFallback = dist
-                        fallbackMob = mob
-                    end
+    for _, mob in pairs(enemies:GetChildren()) do
+        if mob:IsA("Part") then
+            local hp = mob:GetAttribute("HP")
+            local scale = mob:GetAttribute("Scale")
+            if hp and hp > 0 and scale and scale >= 1 then
+                local dist = (mob.Position - rootPart.Position).Magnitude
+                if scale >= 2 and dist < minDistPriority then
+                    minDistPriority = dist
+                    priorityMob = mob
+                elseif dist < minDistFallback then
+                    minDistFallback = dist
+                    fallbackMob = mob
                 end
             end
         end
-
-        return priorityMob or fallbackMob
     end
+
+    return priorityMob or fallbackMob
+end
 
     -- Teleport gần mob
     local function teleportNearMob(mob)
