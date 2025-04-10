@@ -68,16 +68,7 @@ local TeleportTab = Window:CreateTab("Teleport", 106229124186030)
 InfoTab:CreateParagraph({
     Title = "🛠️ Cập nhật mới nhất",
     Content = [[
-📌 - Version: v1.2
-🆕 + Thêm Auto Join Castle
-🔧 + Cải thiện hiệu xuất tính năng
-💡 + Lưu setting khi telepoint
-⚔️ + Arise đang có "Jinwoo"-"Pucci"-"Denji"
-⛩️ + Check double "bú sjw N 🤑"
-✅️ - Anti afk đã được bật
-🔧 + New farm = tele
-👉 --Lưu ý bật Auto destroy mới arise đc mấy con kia---
- + Add teleport
+-- New UI
     ]]
 })
 
