@@ -457,7 +457,7 @@ MiscTab:AddToggle({
 
 local TeleportTab = Window:MakeTab({
     Name = "Teleport",
-    Icon = "rbxassetid://12222222222222", -- Bạn có thể thay đổi icon
+    Icon = "rbxassetid://106229124186030", -- Bạn có thể thay đổi icon
     PremiumOnly = false
 })
 
@@ -485,7 +485,7 @@ for _, data in ipairs(teleportData) do
                 OrionLib:MakeNotification({
                     Name = "Teleported!",
                     Content = "Đã dịch chuyển đến " .. data.Name,
-                    Image = "rbxassetid://4483345998",
+                    Image = "rbxassetid://126309628188296",
                     Time = 3
                 })
 
