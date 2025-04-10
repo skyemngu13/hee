@@ -317,7 +317,7 @@ task.spawn(function()
     end
 end)
 
--- Tạo Tab Misc với Toggle AutoClick (Tab này sẽ là tab thứ 3)
+-- Tạo Tab Misc
 local MiscTab = Window:MakeTab({
     Name = "Misc",
     Icon = "rbxassetid://95758233681936",
@@ -406,6 +406,33 @@ MiscTab:AddToggle({
             queue_on_teleport([[
                 loadstring(game:HttpGet('https://raw.githubusercontent.com/Baylac2006/memaybeo/refs/heads/main/memaybeo'))()
             ]])
+        end
+    end
+})
+
+-- Toggle Bypass Cooldown
+MiscTab:AddToggle({
+    Name = "No Cooldown",
+    Default = settings["BypassCooldown"] or false,
+    Callback = function(val)
+        settings["BypassCooldown"] = val
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                local replicated = game:GetService("ReplicatedStorage")
+                local success, module = pcall(function()
+                    return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
+                end)
+
+                if success and module then
+                    module.Verify = function(...) return true end
+                    module.VerifyPower = function(...) return true end
+                    module.VerifyNpc = function(...) return true end
+                    module.VerifyPlayer = function(...) return true end
+                    module.VerifyPowerPlayer = function(...) return true end
+                end
+            end)
         end
     end
 })
@@ -528,6 +555,24 @@ task.spawn(function()
                 loadstring(game:HttpGet(t.Script))()
             end)
         end
+    end
+
+  -- kiểm tra BypassCooldown
+    if settings["BypassCooldown"] then
+        task.spawn(function()
+            local replicated = game:GetService("ReplicatedStorage")
+            local success, module = pcall(function()
+                return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
+            end)
+
+            if success and module then
+                module.Verify = function(...) return true end
+                module.VerifyPower = function(...) return true end
+                module.VerifyNpc = function(...) return true end
+                module.VerifyPlayer = function(...) return true end
+                module.VerifyPowerPlayer = function(...) return true end
+            end
+        end)
     end
 end)
 
