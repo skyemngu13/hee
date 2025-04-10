@@ -18,7 +18,7 @@ if success and extraFunctionsModule then
         getgenv()._original_GetPlayerSpeed = extraFunctions.GetPlayerSpeed
 
         extraFunctions.GetPlayerSpeed = function(player)
-            return 999999
+            return 9999999
         end
     end
 end
@@ -134,7 +134,7 @@ MainTab:AddToggle({
 
 
 MainTab:AddTextbox({
-    Name = "Delay giết quái Dungeon (giây)",
+    Name = "Delay kill quái Dungeon (giây)",
     Default = tostring(dungeonDelay),
     TextDisappear = false,
     Callback = function(val)
@@ -195,7 +195,7 @@ task.spawn(function()
             if distance > 7 then -- teleport nếu cách xa hơn 8 studs
                 teleportNearMob(mob)
             end
-            task.wait(0.2)
+            task.wait(0.1)
         end
         task.wait(dungeonDelay)
     end
@@ -299,7 +299,7 @@ task.spawn(function()
             if distance > 7 then
                 teleportNearMob(mob)
             end
-            task.wait(0.2)
+            task.wait(0.1)
         end
         task.wait(delayAfterKill)
     end
