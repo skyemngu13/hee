@@ -455,6 +455,50 @@ MiscTab:AddToggle({
     end
 })
 
+local TeleportTab = Window:MakeTab({
+    Name = "Teleport",
+    Icon = "rbxassetid://12222222222222", -- Bạn có thể thay đổi icon
+    PremiumOnly = false
+})
+
+local teleportData = {
+    {Name = "Solo lvl", Position = CFrame.new(577.968262, 27.9623756, 261.452271, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
+    {Name = "Naruto", Position = CFrame.new(-3380.2373, 29.8265285, 2257.26196, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
+    {Name = "One piece", Position = CFrame.new(-2851.1062, 49.8987885, -2011.39526, 0.739920259, -0.0159788765, 0.672504723, 0.0134891849, 0.999869287, 0.0089157233, -0.672559321, 0.00247461651, 0.74003911)},
+    {Name = "Bleach", Position = CFrame.new(2641.79517, 45.9265289, -2645.07568, 0.780932784, -0, -0.624615133, 0, 1, -0, 0.624615133, 0, 0.780932784)},
+    {Name = "Black clover", Position = CFrame.new(198.338684, 39.2076797, 4296.10938, 0.993159413, -0, -0.116766132, 0, 1, -0, 0.116766132, 0, 0.993159413)},
+    {Name = "Chain sawn man", Position = CFrame.new(236.932678, 33.3960934, -4301.60547, 0, 0, 1, 0, 1, -0, -1, 0, 0)},
+    {Name = "JoJo", Position = CFrame.new(4816.31641, 30.4423409, -120.22998, 0, 0, 1, 0, 1, -0, -1, 0, 0)},
+    {Name = "GuildHall", Position = CFrame.new(9555, -204, 286)},
+}
+
+-- Tạo 7 nút teleport
+for _, data in ipairs(teleportData) do
+    TeleportTab:AddButton({
+        Name = data.Name,
+        Callback = function()
+            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.Anchored = true
+                hrp.CFrame = data.Position
+
+                OrionLib:MakeNotification({
+                    Name = "Teleported!",
+                    Content = "Đã dịch chuyển đến " .. data.Name,
+                    Image = "rbxassetid://4483345998",
+                    Time = 3
+                })
+
+                task.delay(1, function()
+                    if hrp then
+                        hrp.Anchored = false
+                    end
+                end)
+            end
+        end
+    })
+end
+
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 
