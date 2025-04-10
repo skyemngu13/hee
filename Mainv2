@@ -48,7 +48,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 local HttpService = game:GetService("HttpService")
-local settingsFile = "piahub.json"
+local settingsFile = "piahubv2.json"
 local settings = {}
 pcall(function()
     if isfile(settingsFile) then
