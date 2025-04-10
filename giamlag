@@ -1,0 +1,66 @@
+-- Tắt Shadows
+pcall(function()
+    settings().Rendering.ShadowQuality = Enum.ShadowQuality.Off
+end)
+
+-- Giảm chất lượng đồ họa
+pcall(function()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+end)
+
+-- Tắt âm thanh toàn bộ game
+for _, sound in pairs(workspace:GetDescendants()) do
+    if sound:IsA("Sound") then
+        sound.Playing = false
+    end
+end
+
+-- Xóa các Particle, Decals, và Texture không cần thiết
+for _, obj in pairs(workspace:GetDescendants()) do
+    if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") then
+        obj:Destroy()
+    elseif obj:IsA("Decal") or obj:IsA("Texture") then
+        obj:Destroy()
+    end
+end
+
+-- Tắt các Light (ánh sáng)
+for _, light in pairs(workspace:GetDescendants()) do
+    if light:IsA("PointLight") or light:IsA("SpotLight") or light:IsA("SurfaceLight") then
+        light.Enabled = false
+    end
+end
+
+-- Xóa cây, bụi, chi tiết trang trí nếu có
+for _, obj in pairs(workspace:GetChildren()) do
+    if obj:IsA("Model") and (obj.Name:lower():find("tree") or obj.Name:lower():find("bush") or obj.Name:lower():find("grass")) then
+        obj:Destroy()
+    end
+end
+
+-- Làm nhân vật và mọi người thành khối đơn giản
+local function simplifyCharacter(char)
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Material = Enum.Material.SmoothPlastic
+            part.Color = Color3.fromRGB(100, 100, 100)
+        elseif part:IsA("Decal") then
+            part:Destroy()
+        end
+    end
+end
+
+-- Tối giản LocalPlayer
+pcall(function()
+    simplifyCharacter(game.Players.LocalPlayer.Character)
+end)
+
+-- Tối giản người chơi khác
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(char)
+        simplifyCharacter(char)
+    end)
+end)
+
+-- Tắt hiệu ứng camera rung nếu có
+game:GetService("RunService"):Set3dRenderingEnabled(true)
