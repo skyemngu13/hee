@@ -1,86 +1,120 @@
-while true do
-    -- Kiểm tra PlaceId
-    if game.PlaceId == 87039211657390 then
-        -- Nếu là PlaceId này, chờ 5 giây rồi chạy các hành động sau
-        wait(3)
+-- Tên file lưu trạng thái
+local statusFile = "double_dungeon_status.txt"
 
-        -- Mua vé vào dungeon
-        local args1 = {
-            [1] = {
-                [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
-                [2] = "\n"
-            }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args1))
-
-        wait(1)
-
-        -- Tạo dungeon
-        local args2 = {
-            [1] = {
-                [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
-                [2] = "\n"
-            }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args2))
-
-        wait(1)
-
-        -- Bắt đầu dungeon
-        local args3 = {
-            [1] = {
-                [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
-                [2] = "\n"
-            }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
-
+-- Hàm đọc trạng thái từ file, mặc định là "true"
+local function loadStatus()
+    if isfile(statusFile) then
+        return readfile(statusFile) == "true"
     else
-        -- Nếu không phải PlaceId 87039211657390, chạy script Dungeon thông thường
-        -- Khai báo đường dẫn đến GUI DungeonInfo
-        local dungeonInfo = game.Players.LocalPlayer.PlayerGui.Hud.UpContanier.DungeonInfo
+        writefile(statusFile, "true")
+        return true
+    end
+end
 
-        -- Hàm kiểm tra khi Dungeon còn 13 giây
-        local function isDungeonEndingIn13Seconds()
-            return string.match(dungeonInfo.Text, "^Dungeon Ends in 13s$") ~= nil
-        end
+-- Hàm lưu trạng thái vào file
+local function saveStatus(state)
+    writefile(statusFile, state and "true" or "false")
+end
 
-        -- Kiểm tra xem dungeon có còn 13 giây không
-        if isDungeonEndingIn13Seconds() then
-            -- Mua vé vào dungeon
-            local args1 = {
-                [1] = {
-                    [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
-                    [2] = "\n"
-                }
-            }
-            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args1))
+-- Biến điều khiển trạng thái Double Dungeon
+local DoubleDungeonEnabled = loadStatus()
 
-            wait(1)
+-- Tạo GUI Toggle (ImageButton)
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "DoubleDungeonToggle"
 
-            -- Tạo dungeon
-            local args2 = {
-                [1] = {
-                    [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
-                    [2] = "\n"
-                }
-            }
-            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args2))
+local ToggleBtn = Instance.new("ImageButton")
+ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
+ToggleBtn.Position = UDim2.new(0, 20, 0, 120)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Parent = ScreenGui
 
-            wait(1)
+-- Thêm TextLabel bên trong để hiển thị "ON"/"OFF"
+local StatusText = Instance.new("TextLabel", ToggleBtn)
+StatusText.Size = UDim2.new(0.5, 0, 0.5, 0)
+StatusText.Position = UDim2.new(0.5, 0, 0.5, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusText.TextStrokeTransparency = 0.5
+StatusText.TextScaled = true
+StatusText.Font = Enum.Font.GothamBold
 
-            -- Bắt đầu dungeon
-            local args3 = {
-                [1] = {
-                    [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
-                    [2] = "\n"
-                }
-            }
-            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args3))
+-- Hàm cập nhật GUI
+local function updateToggle()
+    if DoubleDungeonEnabled then
+        ToggleBtn.Image = "rbxassetid://119656940914873" -- icon xanh hoặc ON
+        StatusText.Text = "ON"
+    else
+        ToggleBtn.Image = "rbxassetid://95959117078787" -- icon xám hoặc OFF
+        StatusText.Text = "OFF"
+    end
+end
 
+updateToggle()
+
+-- Bắt sự kiện khi bấm toggle
+ToggleBtn.MouseButton1Click:Connect(function()
+    DoubleDungeonEnabled = not DoubleDungeonEnabled
+    saveStatus(DoubleDungeonEnabled)
+    updateToggle()
+end)
+
+-- Hàm tạo và bắt đầu dungeon
+local function createAndStartDungeon()
+    local bridge = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- Mua vé
+    local args1 = {
+        [1] = {
+            [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args1))
+    wait(1)
+
+    -- Tạo dungeon
+    local args2 = {
+        [1] = {
+            [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args2))
+    wait(1)
+
+    -- Bắt đầu dungeon
+    local args3 = {
+        [1] = {
+            [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args3))
+end
+
+-- Main loop
+while true do
+    if game.PlaceId == 87039211657390 then
+        wait(3)
+        createAndStartDungeon()
+    else
+        local infoGui = game.Players.LocalPlayer.PlayerGui.Hud:FindFirstChild("UpContanier")
+        local dungeonInfo = infoGui and infoGui:FindFirstChild("DungeonInfo")
+
+        if dungeonInfo then
+            if DoubleDungeonEnabled then
+                if string.match(dungeonInfo.Text, "^Dungeon Ends in 13s$") then
+                    createAndStartDungeon()
+                end
+            else
+                if string.match(dungeonInfo.Text, "^Dungeon Ended!") then
+                    wait(2)
+                    createAndStartDungeon()
+                end
+            end
         end
     end
 
-    -- Đợi một chút trước khi kiểm tra lại
     wait(1)
 end
