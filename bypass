@@ -25,7 +25,8 @@ ScreenGui.Name = "DoubleDungeonToggle"
 
 local ToggleBtn = Instance.new("ImageButton")
 ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
-ToggleBtn.Position = UDim2.new(0, 20, 0, 120)
+ToggleBtn.Position = UDim2.new(1, -20, 0.25, 0) -- Giữa bên phải, 1/4 chiều cao màn hình
+ToggleBtn.AnchorPoint = Vector2.new(1, 0.5) -- Giúp căn giữa theo chiều dọc và dính mép phải
 ToggleBtn.BackgroundTransparency = 1
 ToggleBtn.Parent = ScreenGui
 
