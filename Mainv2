@@ -346,7 +346,7 @@ task.spawn(function()
     repeat task.wait(1) until Player:GetAttribute("Loaded") == true
 
     while true do
-        task.wait(0.1)
+        task.wait(0.2)
         if autoClicking then
             if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
                 task.wait(0.2)
