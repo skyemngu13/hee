@@ -683,10 +683,14 @@ end)
 local btn = Instance.new("ImageButton")
 btn.Name = "KButton"
 btn.Size = UDim2.new(0, 40, 0, 40)
-btn.Position = UDim2.new(1, -40, 0.5, -25) -- Bên phải giữa màn hình
+btn.Position = UDim2.new(1, -40, 0.35, -25) -- 🔼 Dịch lên cao hơn
 btn.BackgroundTransparency = 1
-btn.Image = "rbxassetid://126309628188296" -- Bạn có thể thay icon khác nếu muốn
+btn.Image = "rbxassetid://126309628188296"
 btn.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = btn
 
 -- Khi click, giả lập phím K
 btn.MouseButton1Click:Connect(function()
