@@ -193,14 +193,14 @@ end
 
     -- Xử lý mob
     local function handleMob(mob)
-        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
-            local distance = (mob.Position - rootPart.Position).Magnitude
-            if distance > 7 then -- teleport nếu cách xa hơn 8 studs
-                teleportNearMob(mob)
-            end
-            task.wait(0.1)
+    while autoFarm and mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+        local distance = (mob.Position - rootPart.Position).Magnitude
+        if distance > 7 then
+            teleportNearMob(mob)
         end
-        task.wait(dungeonDelay)
+        task.wait(0.1)
+    end
+    task.wait(settings["FarmDelay"] or 0.2)
     end
 
     -- Vòng lặp chính
@@ -220,36 +220,53 @@ end)
 
 MainTab:CreateLabel("🌾 Auto Farm Mori")
 
+-- ⚙️ Cài đặt mặc định
+settings["AutoFarm"] = settings["AutoFarm"] or false
+settings["FarmScales"] = settings["FarmScales"] or {"Normal", "Big"}
+settings["FarmDelay"] = tonumber(settings["FarmDelay"]) or 0.2
+
+local autoFarm = settings["AutoFarm"]
+
+-- 🗡 Toggle: Auto Farm
 MainTab:CreateToggle({
-    Name = "Auto Farm Mori",
-    CurrentValue = autoMori,
-    Flag = "AutoFarmMori",
+    Name = "Auto Farm",
+    CurrentValue = autoFarm,
+    Flag = "AutoFarm",
     Callback = function(val)
-        autoMori = val
-        settings["AutoFarmMori"] = val
+        autoFarm = val
+        settings["AutoFarm"] = val
         saveSettings()
     end
 })
 
--- 📝 Textbox: Delay kill Dungeon
-local moriInput = MainTab:CreateInput({
-    Name = "Delay kill (giây)",
-    PlaceholderText = "0.5",
-    RemoveTextAfterFocusLost = false,
-    Default = "0.5",
+-- 🔽 Dropdown chọn Scale
+MainTab:CreateDropdown({
+    Name = "Chọn loại",
+    Options = {"Normal", "Big"},
+    MultiSelection = true,
+    CurrentOption = settings["FarmScales"],
+    Flag = "FarmScales",
     Callback = function(val)
-        local number = tonumber(val)
-        if number then
-            delayAfterKill = number
-            settings["DelayAfterKill"] = number
+        settings["FarmScales"] = val
+        saveSettings()
+    end
+})
+
+-- ⏱️ Textbox nhập delay sau khi tiêu diệt
+MainTab:CreateInput({
+    Name = "Delay (giây)",
+    PlaceholderText = "0.2",
+    RemoveTextAfterFocusLost = false,
+    Default = tostring(settings["FarmDelay"]),
+    Callback = function(val)
+        local num = tonumber(val)
+        if num then
+            settings["FarmDelay"] = num
             saveSettings()
         end
     end
 })
 
-task.wait(0.1)  
-moriInput:Set(settings["DelayAfterKill"] and tostring(settings["DelayAfterKill"]) or "0.5")
--- Luồng xử lý Auto Farm Mori
 task.spawn(function()
     local Players = game:GetService("Players")
     local player = Players.LocalPlayer
@@ -257,23 +274,39 @@ task.spawn(function()
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
-    local mapId = "7"
-    local targetMap = enemies:FindFirstChild(mapId)
-    if not targetMap then return end
+    -- Map từ tên scale sang giá trị
+    local scaleMap = {
+        ["Normal"] = 1,
+        ["Big"] = 2
+    }
 
-    -- Tìm mob gần nhất (Scale = 2 và HP > 0)
+    local function isScaleAllowed(scale)
+    local roundedScale = math.floor((scale or 0) + 0.01)
+    for _, name in ipairs(settings["FarmScales"] or {}) do
+        if scaleMap[name] == roundedScale then
+            return true
+        end
+    end
+    return false
+    end
+
+
     local function findNearestMob()
         local nearestMob, minDist = nil, math.huge
 
-        for _, mob in pairs(targetMap:GetChildren()) do
-            if mob:IsA("Part") then
-                local hp = mob:GetAttribute("HP")
-                local scale = mob:GetAttribute("Scale")
-                if hp and hp > 0 and scale == 2 then
-                    local dist = (mob.Position - rootPart.Position).Magnitude
-                    if dist < minDist then
-                        minDist = dist
-                        nearestMob = mob
+        for _, folder in pairs(enemies:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, mob in pairs(folder:GetChildren()) do
+                    if mob:IsA("Part") then
+                        local hp = mob:GetAttribute("HP")
+                        local scale = mob:GetAttribute("Scale")
+                        if hp and hp > 0 and scale and isScaleAllowed(scale) then
+                            local dist = (mob.Position - rootPart.Position).Magnitude
+                            if dist < minDist then
+                                minDist = dist
+                                nearestMob = mob
+                            end
+                        end
                     end
                 end
             end
@@ -282,7 +315,6 @@ task.spawn(function()
         return nearestMob
     end
 
-    -- Teleport gần mob
     local function teleportNearMob(mob)
         if not mob:IsDescendantOf(workspace) then return end
         local success, direction = pcall(function()
@@ -295,7 +327,6 @@ task.spawn(function()
         rootPart.CFrame = CFrame.new(targetPos, mob.Position)
     end
 
-    -- Xử lý mob
     local function handleMob(mob)
         while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
             local distance = (mob.Position - rootPart.Position).Magnitude
@@ -304,12 +335,11 @@ task.spawn(function()
             end
             task.wait(0.1)
         end
-        task.wait(delayAfterKill)
+        task.wait(settings["FarmDelay"] or 0.2)
     end
 
-    -- Vòng lặp chính
     while true do
-        if autoMori then
+        if autoFarm then
             local mob = findNearestMob()
             if mob then
                 handleMob(mob)
@@ -481,6 +511,7 @@ local teleportData = {
     {Name = "Chain sawn man", Position = CFrame.new(236.932678, 33.3960934, -4301.60547)},
     {Name = "JoJo", Position = CFrame.new(4816.31641, 30.4423409, -120.22998)},
     {Name = "GuildHall", Position = CFrame.new(289.015015, 31.8532162, 157.246201, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
+    {Name = "DB", Position = CFrame.new(-6295.89209, 24.6981049, -73.7149353, 0, 0, 1, 0, 1, -0, -1, 0, 0)},
 }
 
 for _, data in ipairs(teleportData) do
