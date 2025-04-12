@@ -140,7 +140,7 @@ MainTab:CreateToggle({
 
 -- 🔽 Dropdown chọn loại quái (scale)
 MainTab:CreateDropdown({
-    Name = "🎯 Chọn loại quái (Scale)",
+    Name = " Chọn loại quái",
     Options = {"All", "Normal", "Big"},
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
@@ -153,7 +153,7 @@ MainTab:CreateDropdown({
 
 -- ⏱️ Textbox delay sau khi tiêu diệt
 MainTab:CreateInput({
-    Name = "⏱️ Delay sau khi tiêu diệt (giây)",
+    Name = "⏱Delay sau khi tiêu diệt",
     PlaceholderText = "0.2",
     RemoveTextAfterFocusLost = false,
     Default = tostring(settings["FarmDelay"]),
