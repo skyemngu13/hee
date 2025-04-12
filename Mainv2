@@ -462,7 +462,7 @@ local teleportData = {
     {Name = "Black clover", Position = CFrame.new(198.338684, 39.2076797, 4296.10938)},
     {Name = "Chain sawn man", Position = CFrame.new(236.932678, 33.3960934, -4301.60547)},
     {Name = "JoJo", Position = CFrame.new(4816.31641, 30.4423409, -120.22998)},
-    {Name = "GuildHall", Position = CFrame.new(9555, -204, 286)},
+    {Name = "GuildHall", Position = CFrame.new(289.015015, 31.8532162, 157.246201, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
 }
 
 for _, data in ipairs(teleportData) do
