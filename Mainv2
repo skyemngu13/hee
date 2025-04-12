@@ -218,7 +218,7 @@ end
     end
 end)
 
-MainTab:CreateLabel("🌾 Auto Farm Mori")
+MainTab:CreateLabel("Auto Farm")
 
 -- ⚙️ Cài đặt mặc định
 settings["AutoFarm"] = settings["AutoFarm"] or false
