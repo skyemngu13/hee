@@ -1,103 +1,1045 @@
-local TweenService = game:GetService("TweenService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer and workspace:FindFirstChild("__Extra") and workspace:FindFirstChild("__Main")
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
-local enemies = workspace.__Main.__Enemies.Server
+-- Bypass anti-teleport trước khi load UI
+local replicated = game:GetService("ReplicatedStorage")
+local success, extraFunctionsModule = pcall(function()
+    return require(replicated:WaitForChild("SharedModules"):WaitForChild("ExtraFunctions"))
+end)
 
-local mapId = "7"
-local targetMap = enemies:FindFirstChild(mapId)
-if not targetMap then return end
+if success and extraFunctionsModule then
+    local extraFunctions = extraFunctionsModule
 
-local speed = 1000
-local tween = nil
-local isBusy = false
-local tweenConnection = nil
-local currentMob = nil
-local noclipConnection = nil
+    if not getgenv()._original_GetPlayerSpeed then
+        getgenv()._original_GetPlayerSpeed = extraFunctions.GetPlayerSpeed
 
--- Bật/tắt noclip cho toàn bộ part trong nhân vật
-local function setNoClip(state)
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = not state
+        extraFunctions.GetPlayerSpeed = function(player)
+            return 9999999
         end
     end
 end
 
--- Tìm mob gần nhất thỏa HP > 0 và Scale == 2
-local function findNearestMob()
-    local nearest, minDist = nil, math.huge
-    for _, mob in pairs(targetMap:GetChildren()) do
+-- 🪟 Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Pịa Hub - Vãi Pịa 💩",
+    LoadingTitle = "Đang tải GUI...",
+    LoadingSubtitle = "Vãi Pịa",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "PiaHubConfig",
+        FileName = "Settings"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = false
+    },
+    KeySystem = false,
+    KeySettings = {
+        Title = "Pịa Hub",
+        Subtitle = "Không cần nhập key",
+        Note = "Free for all!",
+        FileName = "PiaHubKey",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = "piahub123"
+    }
+})
+
+local HttpService = game:GetService("HttpService")
+local settingsFile = "piahubv2.json"
+local settings = {}
+pcall(function()
+    if isfile(settingsFile) then
+        settings = HttpService:JSONDecode(readfile(settingsFile))
+    end
+end)
+
+autodungeon = settings["Autofarmdungeon"] or false
+dungeonDelay = settings["DungeonDelay"] or 0.5
+autoMori = settings["AutoFarmMori"] or false
+delayAfterKill = settings["DelayAfterKill"] or 0.5
+
+local function saveSettings()
+    writefile(settingsFile, HttpService:JSONEncode(settings))
+end
+
+local InfoTab = Window:CreateTab("Info", 83969479610474)
+local MainTab = Window:CreateTab("Main", 124598949660449)
+local DungeonTab = Window:CreateTab("Dungeon", 106229124186030)
+local MiscTab = Window:CreateTab("Misc", 95758233681936)
+local TeleportTab = Window:CreateTab("Teleport", 136059427982959)
+
+InfoTab:CreateParagraph({
+    Title = "🛠️ Cập nhật mới nhất",
+    Content = [[
+-- New UI
+    ]]
+})
+
+-- ⚙️ Cài đặt mặc định
+settings["AutoDestroy"] = settings["AutoDestroy"] or false
+settings["AriseModels"] = settings["AriseModels"] or {"Jinwoo", "Pucci", "Denji"}
+
+local autoDestroy = settings["AutoDestroy"]
+local selectedModels = settings["AriseModels"]
+
+-- 📌 Danh sách tất cả model có thể chọn
+local allModels = {"Jinwoo", "Pucci", "Denji", "Igris", "Julius", "Ulquiorra"}  -- bạn có thể thêm tùy ý
+
+-- 🗡 Toggle: Auto Destroy
+MainTab:CreateToggle({
+    Name = "🗡 Auto Destroy",
+    CurrentValue = autoDestroy,
+    Flag = "AutoDestroy",
+    Callback = function(val)
+        autoDestroy = val
+        settings["AutoDestroy"] = val
+        saveSettings()
+    end
+})
+
+-- 🔽 Dropdown: Model để Arise
+MainTab:CreateDropdown({
+    Name = "🔽 Chọn Model để Arise",
+    Options = allModels,
+    MultiSelection = true,
+    CurrentOption = selectedModels,
+    Flag = "AriseModels",
+    Callback = function(newList)
+        selectedModels = newList
+        settings["AriseModels"] = newList
+        saveSettings()
+    end
+})
+
+-- 🌀 Xử lý Auto Destroy/Arise
+task.spawn(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Workspace = game:GetService("Workspace")
+    local Players = game:GetService("Players")
+
+    local player = Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    local enemies = Workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+    local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- Hàm tìm mob gần nhất
+    local function getNearestMob()
+        local nearestMob, shortestDistance = nil, math.huge
+
+        local function checkFolder(folder)
+            for _, mob in pairs(folder:GetChildren()) do
+                if mob:IsA("Part") then
+                    local distance = (mob.Position - hrp.Position).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        nearestMob = mob
+                    end
+                end
+            end
+        end
+
+        for i = 1, 7 do
+            local folder = enemies:FindFirstChild(tostring(i))
+            if folder then checkFolder(folder) end
+        end
+
+        checkFolder(enemies)
+        return nearestMob
+    end
+
+    -- Xử lý Arise hoặc Destroy
+    local function handleMob()
+        local mob = getNearestMob()
+        if not mob then return end
+
         local hp = mob:GetAttribute("HP")
+        local model = mob:GetAttribute("Model")
         local scale = mob:GetAttribute("Scale")
-        if hp and hp > 0 and scale == 2 then
-            local dist = (mob.Position - rootPart.Position).Magnitude
-            if dist < minDist then
-                minDist, nearest = dist, mob
+
+        if hp and hp > 0 then return end  -- chỉ xử lý mob đã chết
+
+        -- Tạo danh sách lọc từ dropdown
+        local defaultScale = 2.5
+        local ariseFilter = {}
+        for _, mdl in ipairs(settings["AriseModels"] or {}) do
+            ariseFilter[mdl] = defaultScale
+        end
+
+        local function fireRemote(eventType)
+            for _ = 1, 4 do
+                local args = {
+                    [1] = {
+                        [1] = {
+                            ["Event"] = eventType,
+                            ["Enemy"] = mob.Name
+                        },
+                        [2] = "\4"
+                    }
+                }
+                remote:FireServer(unpack(args))
+                task.wait(0.2)
+            end
+        end
+
+        if ariseFilter[model] and scale == ariseFilter[model] then
+            fireRemote("EnemyCapture")
+        else
+            fireRemote("EnemyDestroy")
+        end
+    end
+
+    -- Vòng lặp chính
+    while true do
+        if autoDestroy then
+            pcall(handleMob)
+        end
+        task.wait(0.1)
+    end
+end)
+
+MainTab:CreateLabel("🌾 Auto Farm Mori")
+
+MainTab:CreateToggle({
+    Name = "Auto Farm Mori",
+    CurrentValue = autoMori,
+    Flag = "AutoFarmMori",
+    Callback = function(val)
+        autoMori = val
+        settings["AutoFarmMori"] = val
+        saveSettings()
+    end
+})
+
+-- 📝 Textbox: Delay kill Dungeon
+local moriInput = MainTab:CreateInput({
+    Name = "Delay kill (giây)",
+    PlaceholderText = "0.5",
+    RemoveTextAfterFocusLost = false,
+    Default = "0.5",
+    Callback = function(val)
+        local number = tonumber(val)
+        if number then
+            delayAfterKill = number
+            settings["DelayAfterKill"] = number
+            saveSettings()
+        end
+    end
+})
+
+task.wait(0.1)  
+moriInput:Set(settings["DelayAfterKill"] and tostring(settings["DelayAfterKill"]) or "0.5")
+-- Luồng xử lý Auto Farm Mori
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+
+    local mapId = "7"
+    local targetMap = enemies:FindFirstChild(mapId)
+    if not targetMap then return end
+
+    -- Tìm mob gần nhất (Scale = 2 và HP > 0)
+    local function findNearestMob()
+        local nearestMob, minDist = nil, math.huge
+
+        for _, mob in pairs(targetMap:GetChildren()) do
+            if mob:IsA("Part") then
+                local hp = mob:GetAttribute("HP")
+                local scale = mob:GetAttribute("Scale")
+                if hp and hp > 0 and scale == 2 then
+                    local dist = (mob.Position - rootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearestMob = mob
+                    end
+                end
+            end
+        end
+
+        return nearestMob
+    end
+
+    -- Teleport gần mob
+    local function teleportNearMob(mob)
+        if not mob:IsDescendantOf(workspace) then return end
+        local success, direction = pcall(function()
+            return (rootPart.Position - mob.Position).Unit
+        end)
+        if not success then return end
+
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
+        local targetPos = mob.Position + offset
+        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
+    end
+
+    -- Xử lý mob
+    local function handleMob(mob)
+        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+            local distance = (mob.Position - rootPart.Position).Magnitude
+            if distance > 7 then
+                teleportNearMob(mob)
+            end
+            task.wait(0.1)
+        end
+        task.wait(delayAfterKill)
+    end
+
+    -- Vòng lặp chính
+    while true do
+        if autoMori then
+            local mob = findNearestMob()
+            if mob then
+                handleMob(mob)
+            else
+                task.wait(0.2)
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+DungeonTab:CreateLabel("Auto farm Dungeon")
+-- ⚙️ Cài đặt mặc định
+settings["AutoBypassDungeon"] = settings["AutoBypassDungeon"] or false
+settings["AutoCheckDD"] = settings["AutoCheckDD"] or false
+
+-- 🛡️ Auto Bypass Dungeon Toggle (ở trên)
+DungeonTab:CreateToggle({
+    Name = "Auto Bypass Dungeon",
+    CurrentValue = settings["AutoBypassDungeon"],
+    Flag = "AutoBypassDungeon",
+    Callback = function(val)
+        settings["AutoBypassDungeon"] = val
+        saveSettings()
+    end
+})
+
+-- ⏳ Auto Check DD Toggle (ở dưới)
+DungeonTab:CreateToggle({
+    Name = "Auto Check DD",
+    CurrentValue = settings["AutoCheckDD"],
+    Flag = "AutoCheckDD",
+    Callback = function(val)
+        settings["AutoCheckDD"] = val
+        saveSettings()
+    end
+})
+
+-- 🏰 Hàm tạo Dungeon
+local function createAndStartDungeon()
+    local bridge = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    local args1 = {
+        [1] = {
+            [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args1))
+    wait(1)
+
+    local args2 = {
+        [1] = {
+            [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args2))
+    wait(1)
+
+    local args3 = {
+        [1] = {
+            [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args3))
+end
+
+-- 🔁 Luồng xử lý Auto Dungeon (cho cả hai toggle)
+task.spawn(function()
+    local lastText = ""
+    local waitFor12s = false
+
+    while true do
+        if not settings["AutoBypassDungeon"] and not settings["AutoCheckDD"] then
+            wait(1)
+        else
+            if game.PlaceId == 87039211657390 then
+                wait(3)
+                createAndStartDungeon()
+            else
+                local player = game.Players.LocalPlayer
+                local infoGui = player:WaitForChild("PlayerGui"):WaitForChild("Hud"):FindFirstChild("UpContanier")
+                local dungeonInfo = infoGui and infoGui:FindFirstChild("DungeonInfo")
+
+                if dungeonInfo then
+                    local currentText = dungeonInfo.Text
+
+                    -- ⏳ Auto Check DD (13s > 12s)
+                    if settings["AutoCheckDD"] then
+                        if currentText == "Dungeon Ends in 13s" then
+                            waitFor12s = true
+                        elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
+                            createAndStartDungeon()
+                            waitFor12s = false
+                        elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
+                            waitFor12s = false
+                        end
+                    end
+
+                    -- 🛡️ Auto Bypass Dungeon (Dungeon Ended)
+                    if settings["AutoBypassDungeon"] then
+                        if currentText == "Dungeon Ended!" and lastText ~= currentText then
+                            task.delay(2, createAndStartDungeon)
+                        end
+                    end
+
+                    lastText = currentText
+                end
+            end
+            wait(0.3)
+        end
+    end
+end)
+
+DungeonTab:CreateToggle({
+    Name = "Auto Farm Dungeon",
+    CurrentValue = autodungeon,
+    Flag = "Autofarmdungeon",
+    Callback = function(val)
+        autodungeon = val
+        settings["Autofarmdungeon"] = val
+        saveSettings()
+    end
+})
+
+-- 📝 Textbox: Delay kill Dungeon
+local delayInput = DungeonTab:CreateInput({
+    Name = "Delay kill (giây)",
+    PlaceholderText = "0.5",
+    RemoveTextAfterFocusLost = false,
+    Default = "0.5", -- không quan trọng vì Flag sẽ đè
+    Callback = function(val)
+        local number = tonumber(val)
+        if number then
+            dungeonDelay = number
+            settings["DungeonDelay"] = number
+            saveSettings()
+        end
+    end
+})
+
+-- Sau khi tạo xong, gán giá trị vào input
+task.wait(0.1)  -- Đợi UI load xong
+delayInput:Set(settings["DungeonDelay"] and tostring(settings["DungeonDelay"]) or "0.5")
+
+-- Luồng xử lý Auto Farm 
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+
+    -- Tìm mob gần nhất (HP > 0, Scale >= 2 ưu tiên, nếu không có thì đánh Scale >= 1)
+    local function findNearestMob()
+    local priorityMob, fallbackMob = nil, nil
+    local minDistPriority, minDistFallback = math.huge, math.huge
+
+    for _, mob in pairs(enemies:GetChildren()) do
+        if mob:IsA("Part") then
+            local hp = mob:GetAttribute("HP")
+            local scale = mob:GetAttribute("Scale")
+            if hp and hp > 0 and scale and scale >= 1 then
+                local dist = (mob.Position - rootPart.Position).Magnitude
+                if scale >= 2 and dist < minDistPriority then
+                    minDistPriority = dist
+                    priorityMob = mob
+                elseif dist < minDistFallback then
+                    minDistFallback = dist
+                    fallbackMob = mob
+                end
             end
         end
     end
-    return nearest
+
+    return priorityMob or fallbackMob
 end
 
--- Tween đến mob
-local function moveToMob(mob)
-    if not mob or not mob:IsDescendantOf(workspace) then 
-        isBusy = false 
-        currentMob = nil
-        return 
+    -- Teleport gần mob
+    local function teleportNearMob(mob)
+        local direction = (rootPart.Position - mob.Position).Unit
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
+        local targetPos = mob.Position + offset
+        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
     end
 
-    local hp = mob:GetAttribute("HP")
-    local scale = mob:GetAttribute("Scale")
-    if not hp or hp <= 0 or scale ~= 2 then 
-        isBusy = false 
-        currentMob = nil
-        return 
+    -- Xử lý mob
+    local function handleMob(mob)
+        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+            local distance = (mob.Position - rootPart.Position).Magnitude
+            if distance > 7 then -- teleport nếu cách xa hơn 8 studs
+                teleportNearMob(mob)
+            end
+            task.wait(0.1)
+        end
+        task.wait(dungeonDelay)
     end
 
-    isBusy = true
-    currentMob = mob
+    -- Vòng lặp chính
+    while true do
+        if autodungeon then
+            local mob = findNearestMob()
+            if mob then
+                handleMob(mob)
+            else
+                task.wait(0.2)
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+-- 🧮 Textbox: Nhập số tầng hoặc thông tin tùy ý
+DungeonTab:CreateLabel("Auto castle")
 
-    if tween then tween:Cancel() end
-    if tweenConnection then tweenConnection:Disconnect() end
-    if noclipConnection then noclipConnection:Disconnect() end
+settings["AutoCastleCustom"] = settings["AutoCastleCustom"] or false
+settings["CastleTargetFloor"] = settings["CastleTargetFloor"] or "30"
 
-    local offset = (mob.Position - rootPart.Position).Unit * -4
-    local targetPosition = mob.Position + offset + Vector3.new(0, 3, 0)
-    local distance = (targetPosition - rootPart.Position).Magnitude
-    local tweenTime = math.max(distance / speed, 0.1)
+local targetFloor = tonumber(settings["CastleTargetFloor"]) or 30
+local checkingCastle = false
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+local lobbyPlaceId = 87039211657390
 
-    -- Bật noclip liên tục trong lúc tween
-    setNoClip(true)
-    noclipConnection = RunService.Stepped:Connect(function()
-        setNoClip(true)
-    end)
+-- Tạo toggle
+DungeonTab:CreateToggle({
+    Name = "Auto Castle Join",
+    CurrentValue = settings["AutoCastleCustom"],
+    Flag = "AutoCastleCustom",
+    Callback = function(val)
+        settings["AutoCastleCustom"] = val
+        saveSettings()
 
-    tween = TweenService:Create(rootPart, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {
-        CFrame = CFrame.new(targetPosition, mob.Position)
+        if val then
+            -- Gửi JoinCastle mỗi phút từ 45–58
+            task.spawn(function()
+                while settings["AutoCastleCustom"] do
+                    local minute = os.date("*t").min
+                    if minute >= 45 and minute <= 58 then
+                        local args = {
+                            [1] = {
+                                [1] = { ["Event"] = "JoinCastle" },
+                                [2] = "\n"
+                            }
+                        }
+                        pcall(function()
+                            ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+                        end)
+                    end
+                    task.wait(60)
+                end
+            end)
+
+            -- Kiểm tra đạt tới tầng yêu cầu thì Teleport
+            task.spawn(function()
+                while settings["AutoCastleCustom"] do
+                    if not checkingCastle and targetFloor then
+                        local success, _ = pcall(function()
+                            local roomText = LocalPlayer:WaitForChild("PlayerGui")
+                                :WaitForChild("Hud")
+                                :WaitForChild("UpContanier")
+                                :WaitForChild("Room").Text
+
+                            if typeof(roomText) == "string" and roomText:find("Floor: " .. targetFloor .. "/100") then
+                                checkingCastle = true
+                                task.wait(1)
+                                TeleportService:Teleport(lobbyPlaceId)
+                            end
+                        end)
+                    end
+                    task.wait(2)
+                end
+            end)
+        end
+    end
+})
+
+-- 📝 Textbox: Nhập số tầng để kiểm tra
+local castleFloorInput = DungeonTab:CreateInput({
+    Name = "Floor",
+    PlaceholderText = "31",
+    RemoveTextAfterFocusLost = false,
+    Default = tostring(settings["CastleTargetFloor"]),
+    Callback = function(val)
+        local num = tonumber(val)
+        if num then
+            settings["CastleTargetFloor"] = tostring(num)
+            targetFloor = num
+            checkingCastle = false  -- Cho phép kiểm tra lại nếu thay đổi
+            saveSettings()
+        end
+    end
+})
+
+task.wait(0.1)
+castleFloorInput:Set(settings["CastleTargetFloor"])
+
+-- Gán lại giá trị đã lưu
+task.wait(0.1)
+customInputBox:Set(userInputValue)
+
+local autoClicking = false
+settings["AutoClick"] = settings["AutoClick"] or false
+
+MiscTab:CreateToggle({
+    Name = "AutoClick",
+    CurrentValue = settings["AutoClick"],
+    Flag = "AutoClick",
+    Callback = function(val)
+        settings["AutoClick"] = val
+        autoClicking = val
+        saveSettings()
+    end
+})
+
+-- Luồng xử lý AutoClick
+task.spawn(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Player = game:GetService("Players").LocalPlayer
+    local SharedModules = ReplicatedStorage:WaitForChild("SharedModules")
+    local WeaponsModule = require(SharedModules:WaitForChild("WeaponsModule"))
+
+    repeat task.wait(1) until Player:GetAttribute("Loaded") == true
+
+    while true do
+        task.wait(0.1)
+        if autoClicking then
+            if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
+                task.wait(0.1)
+            end
+
+            if Player:GetAttribute("AutoClick") ~= true then
+                Player:SetAttribute("AutoClick", true)
+            end
+
+            WeaponsModule.Click({
+                ["KeyCode"] = Enum.KeyCode.ButtonX
+            }, false, nil, true)
+        end
+    end
+end)
+
+settings["AutoAttack"] = settings["AutoAttack"] or false
+local autoAttackEnabled = settings["AutoAttack"]
+
+MiscTab:CreateToggle({
+    Name = "Auto Attack",
+    CurrentValue = autoAttackEnabled,
+    Flag = "AutoAttack",
+    Callback = function(val)
+        autoAttackEnabled = val
+        settings["AutoAttack"] = val
+        saveSettings()
+    end
+})
+
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+    local dataRemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- Hàm tính khoảng cách
+    local function getDistance(part1, part2)
+        return (part1.Position - part2.Position).Magnitude
+    end
+
+    while true do
+        if autoAttackEnabled then
+            local closestEnemy = nil
+            local minDistance = math.huge
+
+            -- Tìm trong map 1–7
+            for mapId = 1, 7 do
+                local targetMap = enemies:FindFirstChild(tostring(mapId))
+                if targetMap then
+                    for _, part in pairs(targetMap:GetChildren()) do
+                        if part:IsA("Part") and part.Name ~= "" then
+                            local distance = getDistance(rootPart, part)
+                            if distance < minDistance then
+                                closestEnemy = part.Name
+                                minDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- Tìm trong Server chính
+            for _, part in pairs(enemies:GetChildren()) do
+                if part:IsA("Part") and part.Name ~= "" then
+                    local distance = getDistance(rootPart, part)
+                    if distance < minDistance then
+                        closestEnemy = part.Name
+                        minDistance = distance
+                    end
+                end
+            end
+
+            -- Tấn công nếu có kẻ địch
+            if closestEnemy then
+                local args = {
+                    [1] = {
+                        [1] = {
+                            ["Event"] = "PunchAttack",
+                            ["Enemy"] = closestEnemy
+                        },
+                        [2] = "\4"
+                    }
+                }
+                pcall(function()
+                    dataRemoteEvent:FireServer(unpack(args))
+                end)
+            end
+        end
+
+        task.wait(0.1)
+    end
+end)
+
+settings["AutoLoadScript"] = settings["AutoLoadScript"] or false
+
+MiscTab:CreateToggle({
+    Name = "Auto Load Script",
+    CurrentValue = settings["AutoLoadScript"],
+    Flag = "AutoLoadScript",
+    Callback = function(val)
+        settings["AutoLoadScript"] = val
+        saveSettings()
+
+        if val then
+            queue_on_teleport([[
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/Mainv2'))()
+            ]])
+        end
+    end
+})
+
+settings["BypassCooldown"] = settings["BypassCooldown"] or false
+
+MiscTab:CreateToggle({
+    Name = "No Cooldown",
+    CurrentValue = settings["BypassCooldown"],
+    Flag = "BypassCooldown",
+    Callback = function(val)
+        settings["BypassCooldown"] = val
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                local replicated = game:GetService("ReplicatedStorage")
+                local success, module = pcall(function()
+                    return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
+                end)
+
+                if success and module then
+                    module.Verify = function(...) return true end
+                    module.VerifyPower = function(...) return true end
+                    module.VerifyNpc = function(...) return true end
+                    module.VerifyPlayer = function(...) return true end
+                    module.VerifyPowerPlayer = function(...) return true end
+                end
+            end)
+        end
+    end
+})
+
+settings["SpecialScript"] = settings["SpecialScript"] or false
+
+MiscTab:CreateToggle({
+    Name = "Giảm lag",
+    CurrentValue = settings["SpecialScript"],
+    Flag = "SpecialScript",
+    Callback = function(val)
+        settings["SpecialScript"] = val
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/giamlag"))()
+                end)
+            end)
+        end
+    end
+})
+
+settings["AutoHideUI"] = settings["AutoHideUI"] or false
+
+MiscTab:CreateToggle({
+    Name = "Auto Hide UI",
+    CurrentValue = settings["AutoHideUI"],
+    Flag = "AutoHideUI",
+    Callback = function(val)
+        settings["AutoHideUI"] = val
+        saveSettings()
+    end
+})
+
+-- 🕹️ Nếu bật Auto Hide UI thì gửi phím K khi load
+task.spawn(function()
+    task.wait(2)
+    if settings["AutoHideUI"] then
+        local vu = game:GetService("VirtualInputManager")
+        vu:SendKeyEvent(true, Enum.KeyCode.K, false, game)
+        vu:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+    end
+end)
+
+local teleportData = {
+    {Name = "Solo lvl", Position = CFrame.new(577.968262, 27.9623756, 261.452271)},
+    {Name = "Naruto", Position = CFrame.new(-3380.2373, 29.8265285, 2257.26196)},
+    {Name = "One piece", Position = CFrame.new(-2851.1062, 49.8987885, -2011.39526)},
+    {Name = "Bleach", Position = CFrame.new(2641.79517, 45.9265289, -2645.07568)},
+    {Name = "Black clover", Position = CFrame.new(198.338684, 39.2076797, 4296.10938)},
+    {Name = "Chain sawn man", Position = CFrame.new(236.932678, 33.3960934, -4301.60547)},
+    {Name = "JoJo", Position = CFrame.new(4816.31641, 30.4423409, -120.22998)},
+    {Name = "GuildHall", Position = CFrame.new(289.015015, 31.8532162, 157.246201, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
+}
+
+for _, data in ipairs(teleportData) do
+    TeleportTab:CreateButton({
+        Name = data.Name,
+        Callback = function()
+            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.Anchored = true
+                hrp.CFrame = data.Position
+
+                Rayfield:Notify({
+                    Title = "Teleported!",
+                    Content = "Đã dịch chuyển đến " .. data.Name,
+                    Duration = 3,
+                    Image = "rbxassetid://126309628188296"
+                })
+
+                task.delay(1, function()
+                    if hrp then hrp.Anchored = false end
+                end)
+            end
+        end
     })
-    tween:Play()
-
-    tweenConnection = tween.Completed:Once(function()
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        setNoClip(false)
-        isBusy = false
-    end)
 end
 
--- Vòng lặp chính
-while task.wait(0.3) do
-    if not isBusy then
-        local mob = findNearestMob()
-        if mob and mob ~= currentMob then
-            moveToMob(mob)
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+-- Xóa GUI cũ nếu đã tồn tại
+local old = game:GetService("CoreGui"):FindFirstChild("FPSPingDisplay")
+if old then
+	old:Destroy()
+end
+
+-- Tạo GUI mới
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FPSPingDisplay"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 999999
+screenGui.Enabled = true
+
+pcall(function()
+	screenGui.Parent = game:GetService("CoreGui")
+end)
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 240, 0, 100)
+mainFrame.Position = UDim2.new(0, 10, 0, 10)
+mainFrame.BackgroundTransparency = 1
+mainFrame.Parent = screenGui
+
+-- Tạo dòng text
+local function createRow(y)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(1, 0, 0, 30)
+	row.Position = UDim2.new(0, 0, 0, y)
+	row.BackgroundTransparency = 1
+	row.Parent = mainFrame
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = row
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0, 50, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 24
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextStrokeTransparency = 0.5
+	label.Parent = row
+
+	local value = label:Clone()
+	value.Size = UDim2.new(1, -50, 1, 0)
+	value.Parent = row
+
+	return label, value
+end
+
+local fpsLabel, fpsValue = createRow(0)
+local pingLabel, pingValue = createRow(30)
+local timeLabel, timeValue = createRow(60)
+
+fpsLabel.Text = "FPS:"
+pingLabel.Text = "Ping:"
+timeLabel.Text = "Time:"
+
+-- Hiệu ứng rainbow
+local function rainbow(offset)
+	local t = tick()
+	local r = 0.5 + 0.5 * math.sin(t * 3 + offset)
+	local g = 0.5 + 0.5 * math.sin(t * 3 + offset + 2)
+	local b = 0.5 + 0.5 * math.sin(t * 3 + offset + 4)
+	return Color3.new(r, g, b)
+end
+
+-- Luồng riêng để update UI
+task.spawn(function()
+	local fps, count, last = 0, 0, tick()
+
+	RunService.RenderStepped:Connect(function()
+		if not screenGui.Enabled then return end
+
+		count += 1
+		local now = tick()
+
+		if now - last >= 1 then
+			fps = count
+			count = 0
+			last = now
+
+			local pingStat = Stats:FindFirstChild("Network") and Stats.Network:FindFirstChild("ServerStatsItem")
+			local ping = pingStat and pingStat["Data Ping"]:GetValue() or 0
+			pingValue.Text = math.floor(ping + 0.5) .. " ms"
+			fpsValue.Text = tostring(fps)
+		end
+
+		local t = os.date("*t")
+		timeValue.Text = string.format("%02d:%02d:%02d", t.hour, t.min, t.sec)
+
+		-- Rainbow màu
+		fpsLabel.TextColor3 = rainbow(0)
+		fpsValue.TextColor3 = rainbow(1)
+		pingLabel.TextColor3 = rainbow(2)
+		pingValue.TextColor3 = rainbow(3)
+		timeLabel.TextColor3 = rainbow(4)
+		timeValue.TextColor3 = rainbow(5)
+	end)
+end)
+
+task.spawn(function()
+    task.wait(1) -- Đảm bảo UI đã vẽ xong
+
+    -- Gọi lại callback bằng cách bật rồi tắt toggle
+    local function reTrigger(flag)
+        local toggle = Rayfield.Flags[flag]
+        if toggle then
+            toggle:Set(false)
+            task.wait(0.05)
+            toggle:Set(true)
         end
     end
-end
+
+    -- Chạy lại các script toggleList (MainTab)
+    for _, t in ipairs(toggleList) do
+        if settings[t.Key] then
+            reTrigger(t.Key)
+        end
+    end
+
+    -- Gọi lại toggle tính năng MiscTab
+    local miscFlags = {
+        "AutoClick",
+        "AutoAttack",
+        "AutoLoadScript",
+        "SpecialScript",
+        "BypassCooldown"
+    }
+
+    for _, flag in ipairs(miscFlags) do
+        if settings[flag] then
+            reTrigger(flag)
+        end
+    end
+
+    -- Nếu bật BypassCooldown thì patch lại module (vì không thể rely hoàn toàn vào toggle)
+    if settings["BypassCooldown"] then
+        task.spawn(function()
+            local replicated = game:GetService("ReplicatedStorage")
+            local success, module = pcall(function()
+                return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
+            end)
+            if success and module then
+                module.Verify = function(...) return true end
+                module.VerifyPower = function(...) return true end
+                module.VerifyNpc = function(...) return true end
+                module.VerifyPlayer = function(...) return true end
+                module.VerifyPowerPlayer = function(...) return true end
+            end
+        end)
+    end
+end)
+
+local UIS = game:GetService("UserInputService")
+
+-- Tạo ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "ImageButtonGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+pcall(function()
+	gui.Parent = game:GetService("CoreGui")
+end)
+
+-- Tạo ImageButton
+local btn = Instance.new("ImageButton")
+btn.Name = "KButton"
+btn.Size = UDim2.new(0, 40, 0, 40)
+btn.Position = UDim2.new(1, -40, 0.30, -25) -- 🔼 Dịch lên cao hơn
+btn.BackgroundTransparency = 1
+btn.Image = "rbxassetid://126309628188296"
+btn.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = btn
+
+-- Khi click, giả lập phím K
+btn.MouseButton1Click:Connect(function()
+	local vu = game:GetService("VirtualInputManager")
+	vu:SendKeyEvent(true, Enum.KeyCode.K, false, game)
+	vu:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+end)
+
+-- Anti-AFK Script (Auto Execute Version)
+local vu = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    vu:CaptureController()
+    vu:ClickButton2(Vector2.new(0, 0))
+end)
