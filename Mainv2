@@ -194,9 +194,9 @@ task.spawn(function()
         return false
     end
 
-    -- Tìm model trong Client theo UUID từ Part trong Server
+    -- Tìm mob gần nhất: lấy Part ở Server, Model ở Client nếu có
     local function findNearestMob()
-        local nearestModel, nearestPart, minDist = nil, nil, math.huge
+        local nearestPart, nearestModel, minDist = nil, nil, math.huge
 
         local function check(uuidPart)
             local hp = uuidPart:GetAttribute("HP")
@@ -205,13 +205,19 @@ task.spawn(function()
                 local uuid = uuidPart.Name
                 local clientModel = enemiesClient:FindFirstChild(uuid, true)
 
+                -- Ưu tiên dùng vị trí của model nếu có, nếu không dùng Part
+                local pos
                 if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
-                    local dist = (clientModel.HumanoidRootPart.Position - rootPart.Position).Magnitude
-                    if dist < minDist then
-                        minDist = dist
-                        nearestModel = clientModel
-                        nearestPart = uuidPart
-                    end
+                    pos = clientModel.HumanoidRootPart.Position
+                else
+                    pos = uuidPart.Position
+                end
+
+                local dist = (pos - rootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearestPart = uuidPart
+                    nearestModel = clientModel -- có thể là nil, không sao
                 end
             end
         end
@@ -231,7 +237,7 @@ task.spawn(function()
         return nearestModel, nearestPart
     end
 
-    -- Teleport tới mob (dùng Vector3)
+    -- Teleport tới mob (model hoặc part)
     local function teleportNearMob(pos)
         if typeof(pos) ~= "Vector3" then return end
         local dirVector = (rootPart.Position - pos)
@@ -248,15 +254,24 @@ task.spawn(function()
 
     -- Xử lý mob
     local function handleMob(model, part)
-        if not model or not part then return end
+        if not part then return end
 
-        local humanoidRoot = model:FindFirstChild("HumanoidRootPart")
-        if not humanoidRoot then return end
+        local function getTargetPosition()
+            if model and model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then
+                return model.HumanoidRootPart.Position
+            elseif part:IsA("Part") then
+                return part.Position
+            end
+            return nil
+        end
 
         while autoFarm and part:IsDescendantOf(workspace) and (part:GetAttribute("HP") or 0) > 0 do
-            local dist = (humanoidRoot.Position - rootPart.Position).Magnitude
-            if dist > 7 then
-                teleportNearMob(humanoidRoot.Position)
+            local targetPos = getTargetPosition()
+            if targetPos then
+                local dist = (targetPos - rootPart.Position).Magnitude
+                if dist > 7 then
+                    teleportNearMob(targetPos)
+                end
             end
             task.wait(0.1)
         end
@@ -268,7 +283,7 @@ task.spawn(function()
     while true do
         if autoFarm then
             local model, part = findNearestMob()
-            if model and part then
+            if part then
                 handleMob(model, part)
             else
                 task.wait(0.2)
