@@ -56,6 +56,11 @@ pcall(function()
     end
 end)
 
+autodungeon = settings["Autofarmdungeon"] or false
+dungeonDelay = settings["DungeonDelay"] or 0.5
+autoMori = settings["AutoFarmMori"] or false
+delayAfterKill = settings["DelayAfterKill"] or 0.5
+
 local function saveSettings()
     writefile(settingsFile, HttpService:JSONEncode(settings))
 end
@@ -114,9 +119,6 @@ end
 
 MainTab:CreateLabel("🕳️Auto farm Dungeon")
 
-local autodungeon = settings["Autofarmdungeon"] or false
-local dungeonDelay = settings["DungeonDelay"] or 0.5
-
 MainTab:CreateToggle({
     Name = "Auto Farm Dungeon",
     CurrentValue = autodungeon,
@@ -129,11 +131,11 @@ MainTab:CreateToggle({
 })
 
 -- 📝 Textbox: Delay kill Dungeon
-MainTab:CreateInput({
+local delayInput = MainTab:CreateInput({
     Name = "Delay kill (giây)",
     PlaceholderText = "0.5",
     RemoveTextAfterFocusLost = false,
-    Default = tostring(dungeonDelay),
+    Default = "0.5", -- không quan trọng vì Flag sẽ đè
     Callback = function(val)
         local number = tonumber(val)
         if number then
@@ -143,6 +145,10 @@ MainTab:CreateInput({
         end
     end
 })
+
+-- Sau khi tạo xong, gán giá trị vào input
+task.wait(0.1)  -- Đợi UI load xong
+delayInput:Set(settings["DungeonDelay"] and tostring(settings["DungeonDelay"]) or "0.5")
 
 -- Luồng xử lý Auto Farm 
 task.spawn(function()
@@ -214,9 +220,6 @@ end)
 
 MainTab:CreateLabel("🌾 Auto Farm Mori")
 
-local autoMori = settings["AutoFarmMori"] or false
-local delayAfterKill = settings["DelayAfterKill"] or 0.5
-
 MainTab:CreateToggle({
     Name = "Auto Farm Mori",
     CurrentValue = autoMori,
@@ -229,11 +232,11 @@ MainTab:CreateToggle({
 })
 
 -- 📝 Textbox: Delay kill Dungeon
-MainTab:CreateInput({
+local moriInput = MainTab:CreateInput({
     Name = "Delay kill (giây)",
     PlaceholderText = "0.5",
     RemoveTextAfterFocusLost = false,
-    Default = tostring(delayAfterKill),
+    Default = "0.5",
     Callback = function(val)
         local number = tonumber(val)
         if number then
@@ -244,6 +247,8 @@ MainTab:CreateInput({
     end
 })
 
+task.wait(0.1)  
+moriInput:Set(settings["DelayAfterKill"] and tostring(settings["DelayAfterKill"]) or "0.5")
 -- Luồng xử lý Auto Farm Mori
 task.spawn(function()
     local Players = game:GetService("Players")
@@ -595,7 +600,7 @@ end)
 task.spawn(function()
     task.wait(1) -- Đảm bảo UI vẽ xong
 
-    -- Chạy các script đã bật
+    -- Chạy các script đã bật từ toggleList
     for _, t in ipairs(toggleList) do
         if settings[t.Key] then
             pcall(function()
@@ -604,7 +609,7 @@ task.spawn(function()
         end
     end
 
-  -- kiểm tra BypassCooldown
+    -- Kiểm tra BypassCooldown
     if settings["BypassCooldown"] then
         task.spawn(function()
             local replicated = game:GetService("ReplicatedStorage")
@@ -620,6 +625,23 @@ task.spawn(function()
                 module.VerifyPowerPlayer = function(...) return true end
             end
         end)
+    end
+
+    -- Auto set Flag cho các Toggle trong MiscTab khi load file
+    if settings["AutoClick"] and Rayfield.Flags["AutoClick"] then
+        Rayfield.Flags["AutoClick"]:Set(true)
+    end
+    if settings["AutoAttack"] and Rayfield.Flags["AutoAttack"] then
+        Rayfield.Flags["AutoAttack"]:Set(true)
+    end
+    if settings["AutoLoadScript"] and Rayfield.Flags["AutoLoadScript"] then
+        Rayfield.Flags["AutoLoadScript"]:Set(true)
+    end
+    if settings["BypassCooldown"] and Rayfield.Flags["BypassCooldown"] then
+        Rayfield.Flags["BypassCooldown"]:Set(true)
+    end
+    if settings["SpecialScript"] and Rayfield.Flags["SpecialScript"] then
+        Rayfield.Flags["SpecialScript"]:Set(true)
     end
 end)
 
