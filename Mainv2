@@ -683,7 +683,7 @@ end)
 local btn = Instance.new("ImageButton")
 btn.Name = "KButton"
 btn.Size = UDim2.new(0, 40, 0, 40)
-btn.Position = UDim2.new(1, -40, 0.35, -25) -- 🔼 Dịch lên cao hơn
+btn.Position = UDim2.new(1, -40, 0.4, -25) -- 🔼 Dịch lên cao hơn
 btn.BackgroundTransparency = 1
 btn.Image = "rbxassetid://126309628188296"
 btn.Parent = gui
