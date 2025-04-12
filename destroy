@@ -16,7 +16,7 @@ local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRe
 local ariseModels = {
     Jinwoo = true,
     Pucci = true,
-    Denji = true
+    Freeza = true
 }
 
 -- Hàm lấy mob gần nhất từ Server, đồng thời tìm Model trong Client
