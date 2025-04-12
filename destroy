@@ -50,7 +50,7 @@ local function checkAndHandleNearestMob()
         if not hp or hp <= 0 then
             if (model == "Jinwoo" or model == "Pucci" or model == "Denji") and scale and scale >= 2 then
                 -- Thực hiện Arise
-                for i = 1, 3 do
+                for i = 1, 4 do
                     local args = {
                         [1] = {
                             [1] = {
@@ -61,11 +61,11 @@ local function checkAndHandleNearestMob()
                         }
                     }
                     remote:FireServer(unpack(args))
-                    task.wait(0.1)
+                    task.wait(0.2)
                 end
             else
                 -- Thực hiện Destroy
-                for i = 1, 3 do
+                for i = 1, 4 do
                     local args = {
                         [1] = {
                             [1] = {
@@ -76,7 +76,7 @@ local function checkAndHandleNearestMob()
                         }
                     }
                     remote:FireServer(unpack(args))
-                    task.wait(0.1)
+                    task.wait(0.2)
                 end
             end
         end
@@ -84,6 +84,6 @@ local function checkAndHandleNearestMob()
 end
 
 -- Main loop
-while task.wait(0.2) do
+while task.wait(0.1) do
     pcall(checkAndHandleNearestMob)
 end
