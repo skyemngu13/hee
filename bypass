@@ -40,6 +40,18 @@ StatusText.TextStrokeTransparency = 0.5
 StatusText.TextScaled = true
 StatusText.Font = Enum.Font.GothamBold
 
+-- Label tên UI: "Check DD"
+local NameLabel = Instance.new("TextLabel")
+NameLabel.Size = UDim2.new(1, 0, 0, 20)
+NameLabel.Position = UDim2.new(0, 0, 1, 5) -- bên dưới toggle
+NameLabel.BackgroundTransparency = 1
+NameLabel.Text = "Check DD"
+NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+NameLabel.TextStrokeTransparency = 0.5
+NameLabel.Font = Enum.Font.GothamBold
+NameLabel.TextScaled = true
+NameLabel.Parent = ToggleBtn
+
 -- Hàm cập nhật GUI
 local function updateToggle()
     if DoubleDungeonEnabled then
