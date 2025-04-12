@@ -1,3 +1,4 @@
+
 -- Tên file lưu trạng thái
 local statusFile = "double_dungeon_status.txt"
 
@@ -25,25 +26,29 @@ ScreenGui.Name = "DoubleDungeonToggle"
 
 local ToggleBtn = Instance.new("ImageButton")
 ToggleBtn.Size = UDim2.new(0, 60, 0, 60)
-ToggleBtn.Position = UDim2.new(1, -20, 0.25, 0) -- Giữa bên phải, 1/4 chiều cao màn hình
-ToggleBtn.AnchorPoint = Vector2.new(1, 0.5) -- Giúp căn giữa theo chiều dọc và dính mép phải
+ToggleBtn.Position = UDim2.new(1, -20, 0.125, 0)
+ToggleBtn.AnchorPoint = Vector2.new(1, 0.5)
 ToggleBtn.BackgroundTransparency = 1
 ToggleBtn.Parent = ScreenGui
 
--- Thêm TextLabel bên trong để hiển thị "ON"/"OFF"
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = ToggleBtn
+
+-- Text ON/OFF
 local StatusText = Instance.new("TextLabel", ToggleBtn)
 StatusText.Size = UDim2.new(0.5, 0, 0.5, 0)
-StatusText.Position = UDim2.new(0.5, 0, 0.5, 0)
+StatusText.Position = UDim2.new(0.5, 0, 0.25, 0)
 StatusText.BackgroundTransparency = 1
 StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
 StatusText.TextStrokeTransparency = 0.5
 StatusText.TextScaled = true
 StatusText.Font = Enum.Font.GothamBold
 
--- Label tên UI: "Check DD"
+-- Label tên UI
 local NameLabel = Instance.new("TextLabel")
 NameLabel.Size = UDim2.new(1, 0, 0, 20)
-NameLabel.Position = UDim2.new(0, 0, 1, 5) -- bên dưới toggle
+NameLabel.Position = UDim2.new(0, 0, 1, -5)
 NameLabel.BackgroundTransparency = 1
 NameLabel.Text = "Check DD"
 NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -52,31 +57,30 @@ NameLabel.Font = Enum.Font.GothamBold
 NameLabel.TextScaled = true
 NameLabel.Parent = ToggleBtn
 
--- Hàm cập nhật GUI
+-- Hàm cập nhật trạng thái toggle
 local function updateToggle()
     if DoubleDungeonEnabled then
-        ToggleBtn.Image = "rbxassetid://119656940914873" -- icon xanh hoặc ON
+        ToggleBtn.Image = "rbxassetid://119656940914873"
         StatusText.Text = "ON"
     else
-        ToggleBtn.Image = "rbxassetid://95959117078787" -- icon xám hoặc OFF
+        ToggleBtn.Image = "rbxassetid://95959117078787"
         StatusText.Text = "OFF"
     end
 end
 
 updateToggle()
 
--- Bắt sự kiện khi bấm toggle
+-- Sự kiện bấm toggle
 ToggleBtn.MouseButton1Click:Connect(function()
     DoubleDungeonEnabled = not DoubleDungeonEnabled
     saveStatus(DoubleDungeonEnabled)
     updateToggle()
 end)
 
--- Hàm tạo và bắt đầu dungeon
+-- Hàm tạo dungeon
 local function createAndStartDungeon()
     local bridge = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
-    -- Mua vé
     local args1 = {
         [1] = {
             [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
@@ -86,7 +90,6 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args1))
     wait(1)
 
-    -- Tạo dungeon
     local args2 = {
         [1] = {
             [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
@@ -96,7 +99,6 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args2))
     wait(1)
 
-    -- Bắt đầu dungeon
     local args3 = {
         [1] = {
             [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
@@ -106,28 +108,41 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args3))
 end
 
--- Main loop
+-- Main loop theo logic yêu cầu
+local lastText = ""
+local waitFor12s = false
+
 while true do
     if game.PlaceId == 87039211657390 then
         wait(3)
         createAndStartDungeon()
     else
-        local infoGui = game.Players.LocalPlayer.PlayerGui.Hud:FindFirstChild("UpContanier")
+        local infoGui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud"):FindFirstChild("UpContanier")
         local dungeonInfo = infoGui and infoGui:FindFirstChild("DungeonInfo")
 
         if dungeonInfo then
+            local currentText = dungeonInfo.Text
+
             if DoubleDungeonEnabled then
-                if string.match(dungeonInfo.Text, "^Dungeon Ends in 13s$") then
+                -- Nếu thấy 13s → bắt đầu chờ 12s
+                if currentText == "Dungeon Ends in 13s" then
+                    waitFor12s = true
+                elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
                     createAndStartDungeon()
+                    waitFor12s = false
+                elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
+                    waitFor12s = false
                 end
             else
-                if string.match(dungeonInfo.Text, "^Dungeon Ended!") then
-                    wait(2)
-                    createAndStartDungeon()
+                -- Nếu tắt → đợi Dungeon Ended rồi tạo lại
+                if currentText == "Dungeon Ended!" and lastText ~= currentText then
+                    task.delay(2, createAndStartDungeon)
                 end
             end
+
+            lastText = currentText
         end
     end
 
-    wait(1)
+    wait(0.3)
 end
