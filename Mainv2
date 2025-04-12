@@ -74,6 +74,7 @@ InfoTab:CreateParagraph({
     Title = "🛠️ Cập nhật mới nhất",
     Content = [[
 -- New UI
+--fix số lỗi game vừa upd
     ]]
 })
 
