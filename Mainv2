@@ -117,109 +117,7 @@ for _, t in ipairs(toggleList) do
     })
 end
 
-MainTab:CreateLabel("🕳️Auto farm Dungeon")
-
-MainTab:CreateToggle({
-    Name = "Auto Farm Dungeon",
-    CurrentValue = autodungeon,
-    Flag = "Autofarmdungeon",
-    Callback = function(val)
-        autodungeon = val
-        settings["Autofarmdungeon"] = val
-        saveSettings()
-    end
-})
-
--- 📝 Textbox: Delay kill Dungeon
-local delayInput = MainTab:CreateInput({
-    Name = "Delay kill (giây)",
-    PlaceholderText = "0.5",
-    RemoveTextAfterFocusLost = false,
-    Default = "0.5", -- không quan trọng vì Flag sẽ đè
-    Callback = function(val)
-        local number = tonumber(val)
-        if number then
-            dungeonDelay = number
-            settings["DungeonDelay"] = number
-            saveSettings()
-        end
-    end
-})
-
--- Sau khi tạo xong, gán giá trị vào input
-task.wait(0.1)  -- Đợi UI load xong
-delayInput:Set(settings["DungeonDelay"] and tostring(settings["DungeonDelay"]) or "0.5")
-
--- Luồng xử lý Auto Farm 
-task.spawn(function()
-    local Players = game:GetService("Players")
-    local player = Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
-
-    -- Tìm mob gần nhất (HP > 0, Scale >= 2 ưu tiên, nếu không có thì đánh Scale >= 1)
-    local function findNearestMob()
-    local priorityMob, fallbackMob = nil, nil
-    local minDistPriority, minDistFallback = math.huge, math.huge
-
-    for _, mob in pairs(enemies:GetChildren()) do
-        if mob:IsA("Part") then
-            local hp = mob:GetAttribute("HP")
-            local scale = mob:GetAttribute("Scale")
-            if hp and hp > 0 and scale and scale >= 1 then
-                local dist = (mob.Position - rootPart.Position).Magnitude
-                if scale >= 2 and dist < minDistPriority then
-                    minDistPriority = dist
-                    priorityMob = mob
-                elseif dist < minDistFallback then
-                    minDistFallback = dist
-                    fallbackMob = mob
-                end
-            end
-        end
-    end
-
-    return priorityMob or fallbackMob
-end
-
-    -- Teleport gần mob
-    local function teleportNearMob(mob)
-        local direction = (rootPart.Position - mob.Position).Unit
-        local offset = direction * 5 + Vector3.new(0, 3, 0)
-        local targetPos = mob.Position + offset
-        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
-    end
-
-    -- Xử lý mob
-    local function handleMob(mob)
-    while autoFarm and mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
-        local distance = (mob.Position - rootPart.Position).Magnitude
-        if distance > 7 then
-            teleportNearMob(mob)
-        end
-        task.wait(0.1)
-    end
-    task.wait(settings["FarmDelay"] or 0.2)
-    end
-
-    -- Vòng lặp chính
-    while true do
-        if autodungeon then
-            local mob = findNearestMob()
-            if mob then
-                handleMob(mob)
-            else
-                task.wait(0.2)
-            end
-        else
-            task.wait(0.2)
-        end
-    end
-end)
-
-MainTab:CreateLabel("Auto Farm")
-
+MainTab:CreateLabel("Auto Farm all mode")
 -- ⚙️ Cài đặt mặc định
 settings["AutoFarm"] = settings["AutoFarm"] or false
 settings["FarmScales"] = settings["FarmScales"] or {"Normal", "Big"}
@@ -227,9 +125,9 @@ settings["FarmDelay"] = tonumber(settings["FarmDelay"]) or 0.2
 
 local autoFarm = settings["AutoFarm"]
 
--- 🗡 Toggle: Auto Farm
+-- 🔘 Toggle Auto Farm
 MainTab:CreateToggle({
-    Name = "Auto Farm",
+    Name = "🗡 Auto Farm",
     CurrentValue = autoFarm,
     Flag = "AutoFarm",
     Callback = function(val)
@@ -239,10 +137,10 @@ MainTab:CreateToggle({
     end
 })
 
--- 🔽 Dropdown chọn Scale
+-- 🔽 Dropdown chọn loại quái (scale)
 MainTab:CreateDropdown({
-    Name = "Chọn loại",
-    Options = {"Normal", "Big"},
+    Name = "🎯 Chọn loại quái (Scale)",
+    Options = {"All", "Normal", "Big"},
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
     Flag = "FarmScales",
@@ -252,9 +150,9 @@ MainTab:CreateDropdown({
     end
 })
 
--- ⏱️ Textbox nhập delay sau khi tiêu diệt
+-- ⏱️ Textbox delay sau khi tiêu diệt
 MainTab:CreateInput({
-    Name = "Delay (giây)",
+    Name = "⏱️ Delay sau khi tiêu diệt (giây)",
     PlaceholderText = "0.2",
     RemoveTextAfterFocusLost = false,
     Default = tostring(settings["FarmDelay"]),
@@ -272,77 +170,105 @@ task.spawn(function()
     local player = Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
     local rootPart = character:WaitForChild("HumanoidRootPart")
-    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
-    -- Map từ tên scale sang giá trị
+    local enemiesRoot = workspace:WaitForChild("__Main"):WaitForChild("__Enemies")
+    local enemiesServer = enemiesRoot:WaitForChild("Server")
+    local enemiesClient = enemiesRoot:WaitForChild("Client")
+
+    -- Map scale từ tên dropdown sang giá trị
     local scaleMap = {
         ["Normal"] = 1,
         ["Big"] = 2
     }
 
     local function isScaleAllowed(scale)
-    local roundedScale = math.floor((scale or 0) + 0.01)
-    for _, name in ipairs(settings["FarmScales"] or {}) do
-        if scaleMap[name] == roundedScale then
-            return true
+        local selected = settings["FarmScales"] or {}
+        if table.find(selected, "All") then return true end
+        local roundedScale = math.floor((scale or 0) + 0.01)
+        for _, name in ipairs(selected) do
+            if scaleMap[name] == roundedScale then
+                return true
+            end
         end
-    end
-    return false
+        return false
     end
 
-
+    -- Tìm model trong Client theo UUID từ Part trong Server
     local function findNearestMob()
-        local nearestMob, minDist = nil, math.huge
+        local nearestModel, nearestPart, minDist = nil, nil, math.huge
 
-        for _, folder in pairs(enemies:GetChildren()) do
-            if folder:IsA("Folder") then
-                for _, mob in pairs(folder:GetChildren()) do
-                    if mob:IsA("Part") then
-                        local hp = mob:GetAttribute("HP")
-                        local scale = mob:GetAttribute("Scale")
-                        if hp and hp > 0 and scale and isScaleAllowed(scale) then
-                            local dist = (mob.Position - rootPart.Position).Magnitude
-                            if dist < minDist then
-                                minDist = dist
-                                nearestMob = mob
-                            end
-                        end
+        local function check(uuidPart)
+            local hp = uuidPart:GetAttribute("HP")
+            local scale = uuidPart:GetAttribute("Scale")
+            if hp and hp > 0 and scale and isScaleAllowed(scale) then
+                local uuid = uuidPart.Name
+                local clientModel = enemiesClient:FindFirstChild(uuid, true)
+
+                if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
+                    local dist = (clientModel.HumanoidRootPart.Position - rootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearestModel = clientModel
+                        nearestPart = uuidPart
                     end
                 end
             end
         end
 
-        return nearestMob
+        for _, child in ipairs(enemiesServer:GetChildren()) do
+            if child:IsA("Folder") then
+                for _, uuidPart in ipairs(child:GetChildren()) do
+                    if uuidPart:IsA("Part") then
+                        check(uuidPart)
+                    end
+                end
+            elseif child:IsA("Part") then
+                check(child)
+            end
+        end
+
+        return nearestModel, nearestPart
     end
 
-    local function teleportNearMob(mob)
-        if not mob:IsDescendantOf(workspace) then return end
+    -- Teleport tới mob (dùng Vector3)
+    local function teleportNearMob(pos)
+        if typeof(pos) ~= "Vector3" then return end
+        local dirVector = (rootPart.Position - pos)
+        if dirVector.Magnitude == 0 then return end
+
         local success, direction = pcall(function()
-            return (rootPart.Position - mob.Position).Unit
+            return dirVector.Unit
         end)
         if not success then return end
 
         local offset = direction * 5 + Vector3.new(0, 3, 0)
-        local targetPos = mob.Position + offset
-        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
+        rootPart.CFrame = CFrame.new(pos + offset, pos)
     end
 
-    local function handleMob(mob)
-        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
-            local distance = (mob.Position - rootPart.Position).Magnitude
-            if distance > 7 then
-                teleportNearMob(mob)
+    -- Xử lý mob
+    local function handleMob(model, part)
+        if not model or not part then return end
+
+        local humanoidRoot = model:FindFirstChild("HumanoidRootPart")
+        if not humanoidRoot then return end
+
+        while autoFarm and part:IsDescendantOf(workspace) and (part:GetAttribute("HP") or 0) > 0 do
+            local dist = (humanoidRoot.Position - rootPart.Position).Magnitude
+            if dist > 7 then
+                teleportNearMob(humanoidRoot.Position)
             end
             task.wait(0.1)
         end
+
         task.wait(settings["FarmDelay"] or 0.2)
     end
 
+    -- Vòng lặp chính
     while true do
         if autoFarm then
-            local mob = findNearestMob()
-            if mob then
-                handleMob(mob)
+            local model, part = findNearestMob()
+            if model and part then
+                handleMob(model, part)
             else
                 task.wait(0.2)
             end
