@@ -395,7 +395,7 @@ MiscTab:CreateToggle({
 
         if val then
             queue_on_teleport([[
-                loadstring(game:HttpGet('https://raw.githubusercontent.com/Baylac2006/memaybeo/refs/heads/main/memaybeo'))()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/Mainv2'))()
             ]])
         end
     end
@@ -683,7 +683,7 @@ end)
 local btn = Instance.new("ImageButton")
 btn.Name = "KButton"
 btn.Size = UDim2.new(0, 40, 0, 40)
-btn.Position = UDim2.new(1, -40, 0.4, -25) -- 🔼 Dịch lên cao hơn
+btn.Position = UDim2.new(1, -40, 0.45, -25) -- 🔼 Dịch lên cao hơn
 btn.BackgroundTransparency = 1
 btn.Image = "rbxassetid://126309628188296"
 btn.Parent = gui
