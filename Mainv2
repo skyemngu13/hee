@@ -444,6 +444,74 @@ task.spawn(function()
     end
 end)
 
+local spamDust = false
+local selectedDust = "EnchLegendary" -- mặc định
+
+MiscTab:CreateToggle({
+    Name = "Auto Dust",
+    CurrentValue = false,
+    Flag = "AutoDustToggle",
+    Callback = function(state)
+        spamDust = state
+    end
+})
+
+MiscTab:CreateDropdown({
+    Name = "Chọn Dust",
+    Options = {
+        "10 rare = 1 legend",
+        "1 legend = 1 rare",
+        "10 common = 1 rare"
+    },
+    CurrentOption = "10 rare = 1 legend",
+    Flag = "DustType",
+    Callback = function(option)
+        if option == "10 rare = 1 legend" then
+            selectedDust = "EnchLegendary"
+        elseif option == "1 legend = 1 rare" then
+            selectedDust = "EnchRare2"
+        elseif option == "10 common = 1 rare" then
+            selectedDust = "EnchRare" -- Đúng chuẩn server yêu cầu!
+        end
+    end
+})
+
+task.spawn(function()
+    while true do
+        if spamDust then
+            local gui = game.Players.LocalPlayer.PlayerGui:FindFirstChild("ExchangeShop")
+            if gui then
+                gui.Enabled = true  -- Bắt buộc mở GUI
+            end
+
+            local args = {
+                [1] = {
+                    [1] = {
+                        ["Action"] = "Buy",
+                        ["Shop"] = "ExchangeShop",
+                        ["Item"] = selectedDust,
+                        ["Event"] = "ItemShopAction"
+                    },
+                    [2] = "\n"
+                }
+            }
+
+            game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+            print("[AutoDust] Đã gửi đổi:", selectedDust)
+
+            -- Tắt GUI sau khi gửi (nếu muốn)
+            task.wait(0.1)
+            if gui then
+                gui.Enabled = false
+            end
+
+            task.wait(0.3)  -- Delay đúng như bạn muốn
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
 local teleportData = {
     {Name = "Solo lvl", Position = CFrame.new(577.968262, 27.9623756, 261.452271)},
     {Name = "Naruto", Position = CFrame.new(-3380.2373, 29.8265285, 2257.26196)},
