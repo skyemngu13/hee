@@ -1,0 +1,776 @@
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer and workspace:FindFirstChild("__Extra") and workspace:FindFirstChild("__Main")
+
+local HttpService = game:GetService("HttpService")
+local keyFile = "piahubkey.txt"
+
+local KeyGuardLibrary = loadstring(game:HttpGet("https://cdn.keyguardian.org/library/v1.0.0.lua"))()
+local trueData = "63659c5e0b6c4c299080ee5c4d336627"
+local falseData = "9e81550afa454dea98ce5a15dfcb1162"
+
+KeyGuardLibrary.Set({
+	publicToken = "73298d4225c243a9b08431a8d83f8a8f",
+	privateToken = "2b0d4d9907e8413ba2abd5a8862c26b6",
+	trueData = trueData,
+	falseData = falseData,
+})
+
+-- Hàm kiểm tra key và chạy GUI chính nếu hợp lệ
+local function checkAndLoad(key)
+    local result = KeyGuardLibrary.validateDefaultKey(key)
+    if result == trueData then
+        loadMainGUI()
+        return true
+    end
+    return false
+end
+
+-- Nếu có file key -> thử check luôn
+if isfile(keyFile) then
+    local savedKey = readfile(keyFile)
+    if checkAndLoad(savedKey) then return end
+end
+
+-- Nếu không có key hoặc sai -> hiện GUI nhập key
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local KeyWindow = Rayfield:CreateWindow({
+    Name = "🔑 Pịa Hub - Key System",
+    LoadingTitle = "Pịa Hub",
+    LoadingSubtitle = "Đang kiểm tra key...",
+    ConfigurationSaving = { Enabled = false },
+    Discord = { Enabled = false },
+    KeySystem = false
+})
+
+local KeyTab = KeyWindow:CreateTab("🔐 Nhập Key", 4483362458)
+
+KeyTab:CreateParagraph({
+    Title = "📋 Hướng dẫn",
+    Content = "Lấy key tại: https://key.keyguardian.org/73298d4225c243a9b08431a8d83f8a8f"
+})
+
+KeyTab:CreateInput({
+    Name = "Dán key vào đây",
+    PlaceholderText = "Nhập key...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(input)
+        if checkAndLoad(input) then
+            writefile(keyFile, input)
+            Rayfield:Notify({
+                Title = "✅ Thành công",
+                Content = "Key hợp lệ, đang mở GUI...",
+                Duration = 4
+            })
+            KeyWindow:Destroy()
+        else
+            Rayfield:Notify({
+                Title = "❌ Sai key",
+                Content = "Vui lòng thử lại!",
+                Duration = 4
+            })
+        end
+    end
+})
+
+function loadMainGUI()
+-- Bypass anti-teleport trước khi load UI
+local replicated = game:GetService("ReplicatedStorage")
+local success, extraFunctionsModule = pcall(function()
+    return require(replicated:WaitForChild("SharedModules"):WaitForChild("ExtraFunctions"))
+end)
+
+if success and extraFunctionsModule then
+    local extraFunctions = extraFunctionsModule
+
+    if not getgenv()._original_GetPlayerSpeed then
+        getgenv()._original_GetPlayerSpeed = extraFunctions.GetPlayerSpeed
+
+        extraFunctions.GetPlayerSpeed = function(player)
+            return 9999999
+        end
+    end
+end
+
+-- 🪟 Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Pịa Hub - Vãi Pịa 💩",
+    LoadingTitle = "Đang tải GUI...",
+    LoadingSubtitle = "Vãi Pịa",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "PiaHubConfig",
+        FileName = "Settings"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = false
+    },
+    KeySystem = false,
+    KeySettings = {
+        Title = "Pịa Hub",
+        Subtitle = "Không cần nhập key",
+        Note = "Free for all!",
+        FileName = "PiaHubKey",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = "piahub123"
+    }
+})
+
+local HttpService = game:GetService("HttpService")
+local settingsFile = "piahubv2.json"
+local settings = {}
+pcall(function()
+    if isfile(settingsFile) then
+        settings = HttpService:JSONDecode(readfile(settingsFile))
+    end
+end)
+
+autodungeon = settings["Autofarmdungeon"] or false
+dungeonDelay = settings["DungeonDelay"] or 0.5
+autoMori = settings["AutoFarmMori"] or false
+delayAfterKill = settings["DelayAfterKill"] or 0.5
+
+local function saveSettings()
+    writefile(settingsFile, HttpService:JSONEncode(settings))
+end
+
+local InfoTab = Window:CreateTab("Info", 83969479610474)
+local MainTab = Window:CreateTab("Main", 124598949660449)
+local MiscTab = Window:CreateTab("Misc", 95758233681936)
+local TeleportTab = Window:CreateTab("Teleport", 106229124186030)
+
+InfoTab:CreateParagraph({
+    Title = "🛠️ Cập nhật mới nhất",
+    Content = [[
+-- New UI
+    ]]
+})
+
+local toggleList = {
+    {
+        Name = "Auto Bypass",
+        Key = "AutoBypass",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/bypass"
+    },
+    {
+        Name = "Auto Join Castle",
+        Key = "AutoJoinCastle",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/castle"
+    },
+    {
+        Name = "Auto Destroy",
+        Key = "AutoDestroy",
+        Script = "https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/destroy"
+    }
+}
+
+for _, t in ipairs(toggleList) do
+    settings[t.Key] = settings[t.Key] or false
+
+    MainTab:CreateToggle({
+        Name = t.Name,
+        CurrentValue = settings[t.Key],
+        Flag = t.Key,
+        Callback = function(val)
+            settings[t.Key] = val
+            saveSettings()
+
+            if val then
+                task.spawn(function()
+                    pcall(function()
+                        loadstring(game:HttpGet(t.Script))()
+                    end)
+                end)
+            end
+        end
+    })
+end
+
+MainTab:CreateLabel("🕳️Auto farm Dungeon")
+
+MainTab:CreateToggle({
+    Name = "Auto Farm Dungeon",
+    CurrentValue = autodungeon,
+    Flag = "Autofarmdungeon",
+    Callback = function(val)
+        autodungeon = val
+        settings["Autofarmdungeon"] = val
+        saveSettings()
+    end
+})
+
+-- 📝 Textbox: Delay kill Dungeon
+local delayInput = MainTab:CreateInput({
+    Name = "Delay kill (giây)",
+    PlaceholderText = "0.5",
+    RemoveTextAfterFocusLost = false,
+    Default = "0.5", -- không quan trọng vì Flag sẽ đè
+    Callback = function(val)
+        local number = tonumber(val)
+        if number then
+            dungeonDelay = number
+            settings["DungeonDelay"] = number
+            saveSettings()
+        end
+    end
+})
+
+-- Sau khi tạo xong, gán giá trị vào input
+task.wait(0.1)  -- Đợi UI load xong
+delayInput:Set(settings["DungeonDelay"] and tostring(settings["DungeonDelay"]) or "0.5")
+
+-- Luồng xử lý Auto Farm 
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+
+    -- Tìm mob gần nhất (HP > 0, Scale >= 2 ưu tiên, nếu không có thì đánh Scale >= 1)
+    local function findNearestMob()
+    local priorityMob, fallbackMob = nil, nil
+    local minDistPriority, minDistFallback = math.huge, math.huge
+
+    for _, mob in pairs(enemies:GetChildren()) do
+        if mob:IsA("Part") then
+            local hp = mob:GetAttribute("HP")
+            local scale = mob:GetAttribute("Scale")
+            if hp and hp > 0 and scale and scale >= 1 then
+                local dist = (mob.Position - rootPart.Position).Magnitude
+                if scale >= 2 and dist < minDistPriority then
+                    minDistPriority = dist
+                    priorityMob = mob
+                elseif dist < minDistFallback then
+                    minDistFallback = dist
+                    fallbackMob = mob
+                end
+            end
+        end
+    end
+
+    return priorityMob or fallbackMob
+end
+
+    -- Teleport gần mob
+    local function teleportNearMob(mob)
+        local direction = (rootPart.Position - mob.Position).Unit
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
+        local targetPos = mob.Position + offset
+        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
+    end
+
+    -- Xử lý mob
+    local function handleMob(mob)
+        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+            local distance = (mob.Position - rootPart.Position).Magnitude
+            if distance > 7 then -- teleport nếu cách xa hơn 8 studs
+                teleportNearMob(mob)
+            end
+            task.wait(0.1)
+        end
+        task.wait(dungeonDelay)
+    end
+
+    -- Vòng lặp chính
+    while true do
+        if autodungeon then
+            local mob = findNearestMob()
+            if mob then
+                handleMob(mob)
+            else
+                task.wait(0.2)
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+MainTab:CreateLabel("🌾 Auto Farm Mori")
+
+MainTab:CreateToggle({
+    Name = "Auto Farm Mori",
+    CurrentValue = autoMori,
+    Flag = "AutoFarmMori",
+    Callback = function(val)
+        autoMori = val
+        settings["AutoFarmMori"] = val
+        saveSettings()
+    end
+})
+
+-- 📝 Textbox: Delay kill Dungeon
+local moriInput = MainTab:CreateInput({
+    Name = "Delay kill (giây)",
+    PlaceholderText = "0.5",
+    RemoveTextAfterFocusLost = false,
+    Default = "0.5",
+    Callback = function(val)
+        local number = tonumber(val)
+        if number then
+            delayAfterKill = number
+            settings["DelayAfterKill"] = number
+            saveSettings()
+        end
+    end
+})
+
+task.wait(0.1)  
+moriInput:Set(settings["DelayAfterKill"] and tostring(settings["DelayAfterKill"]) or "0.5")
+-- Luồng xử lý Auto Farm Mori
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+
+    local mapId = "7"
+    local targetMap = enemies:FindFirstChild(mapId)
+    if not targetMap then return end
+
+    -- Tìm mob gần nhất (Scale = 2 và HP > 0)
+    local function findNearestMob()
+        local nearestMob, minDist = nil, math.huge
+
+        for _, mob in pairs(targetMap:GetChildren()) do
+            if mob:IsA("Part") then
+                local hp = mob:GetAttribute("HP")
+                local scale = mob:GetAttribute("Scale")
+                if hp and hp > 0 and scale == 2 then
+                    local dist = (mob.Position - rootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearestMob = mob
+                    end
+                end
+            end
+        end
+
+        return nearestMob
+    end
+
+    -- Teleport gần mob
+    local function teleportNearMob(mob)
+        if not mob:IsDescendantOf(workspace) then return end
+        local success, direction = pcall(function()
+            return (rootPart.Position - mob.Position).Unit
+        end)
+        if not success then return end
+
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
+        local targetPos = mob.Position + offset
+        rootPart.CFrame = CFrame.new(targetPos, mob.Position)
+    end
+
+    -- Xử lý mob
+    local function handleMob(mob)
+        while mob:IsDescendantOf(workspace) and (mob:GetAttribute("HP") or 0) > 0 do
+            local distance = (mob.Position - rootPart.Position).Magnitude
+            if distance > 7 then
+                teleportNearMob(mob)
+            end
+            task.wait(0.1)
+        end
+        task.wait(delayAfterKill)
+    end
+
+    -- Vòng lặp chính
+    while true do
+        if autoMori then
+            local mob = findNearestMob()
+            if mob then
+                handleMob(mob)
+            else
+                task.wait(0.2)
+            end
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+local autoClicking = false
+settings["AutoClick"] = settings["AutoClick"] or false
+
+MiscTab:CreateToggle({
+    Name = "AutoClick",
+    CurrentValue = settings["AutoClick"],
+    Flag = "AutoClick",
+    Callback = function(val)
+        settings["AutoClick"] = val
+        autoClicking = val
+        saveSettings()
+    end
+})
+
+-- Luồng xử lý AutoClick
+task.spawn(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Player = game:GetService("Players").LocalPlayer
+    local SharedModules = ReplicatedStorage:WaitForChild("SharedModules")
+    local WeaponsModule = require(SharedModules:WaitForChild("WeaponsModule"))
+
+    repeat task.wait(1) until Player:GetAttribute("Loaded") == true
+
+    while true do
+        task.wait(0.1)
+        if autoClicking then
+            if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
+                task.wait(0.2)
+            end
+
+            if Player:GetAttribute("AutoClick") ~= true then
+                Player:SetAttribute("AutoClick", true)
+            end
+
+            WeaponsModule.Click({
+                ["KeyCode"] = Enum.KeyCode.ButtonX
+            }, false, nil, true)
+        end
+    end
+end)
+
+settings["AutoAttack"] = settings["AutoAttack"] or false
+
+MiscTab:CreateToggle({
+    Name = "Auto Attack",
+    CurrentValue = settings["AutoAttack"],
+    Flag = "AutoAttack",
+    Callback = function(val)
+        settings["AutoAttack"] = val
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/auto%20attack"))()
+                end)
+            end)
+        end
+    end
+})
+
+settings["AutoLoadScript"] = settings["AutoLoadScript"] or false
+
+MiscTab:CreateToggle({
+    Name = "Auto Load Script",
+    CurrentValue = settings["AutoLoadScript"],
+    Flag = "AutoLoadScript",
+    Callback = function(val)
+        settings["AutoLoadScript"] = val
+        saveSettings()
+
+        if val then
+            queue_on_teleport([[
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/Baylac2006/memaybeo/refs/heads/main/memaybeo'))()
+            ]])
+        end
+    end
+})
+
+settings["BypassCooldown"] = settings["BypassCooldown"] or false
+
+MiscTab:CreateToggle({
+    Name = "No Cooldown",
+    CurrentValue = settings["BypassCooldown"],
+    Flag = "BypassCooldown",
+    Callback = function(val)
+        settings["BypassCooldown"] = val
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                local replicated = game:GetService("ReplicatedStorage")
+                local success, module = pcall(function()
+                    return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
+                end)
+
+                if success and module then
+                    module.Verify = function(...) return true end
+                    module.VerifyPower = function(...) return true end
+                    module.VerifyNpc = function(...) return true end
+                    module.VerifyPlayer = function(...) return true end
+                    module.VerifyPowerPlayer = function(...) return true end
+                end
+            end)
+        end
+    end
+})
+
+settings["SpecialScript"] = settings["SpecialScript"] or false
+
+MiscTab:CreateToggle({
+    Name = "Giảm lag",
+    CurrentValue = settings["SpecialScript"],
+    Flag = "SpecialScript",
+    Callback = function(val)
+        settings["SpecialScript"] = val
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                pcall(function()
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/giamlag"))()
+                end)
+            end)
+        end
+    end
+})
+
+settings["AutoHideUI"] = settings["AutoHideUI"] or false
+
+MiscTab:CreateToggle({
+    Name = "Auto Hide UI",
+    CurrentValue = settings["AutoHideUI"],
+    Flag = "AutoHideUI",
+    Callback = function(val)
+        settings["AutoHideUI"] = val
+        saveSettings()
+    end
+})
+
+local teleportData = {
+    {Name = "Solo lvl", Position = CFrame.new(577.968262, 27.9623756, 261.452271)},
+    {Name = "Naruto", Position = CFrame.new(-3380.2373, 29.8265285, 2257.26196)},
+    {Name = "One piece", Position = CFrame.new(-2851.1062, 49.8987885, -2011.39526)},
+    {Name = "Bleach", Position = CFrame.new(2641.79517, 45.9265289, -2645.07568)},
+    {Name = "Black clover", Position = CFrame.new(198.338684, 39.2076797, 4296.10938)},
+    {Name = "Chain sawn man", Position = CFrame.new(236.932678, 33.3960934, -4301.60547)},
+    {Name = "JoJo", Position = CFrame.new(4816.31641, 30.4423409, -120.22998)},
+    {Name = "GuildHall", Position = CFrame.new(289.015015, 31.8532162, 157.246201, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
+}
+
+for _, data in ipairs(teleportData) do
+    TeleportTab:CreateButton({
+        Name = data.Name,
+        Callback = function()
+            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.Anchored = true
+                hrp.CFrame = data.Position
+
+                Rayfield:Notify({
+                    Title = "Teleported!",
+                    Content = "Đã dịch chuyển đến " .. data.Name,
+                    Duration = 3,
+                    Image = "rbxassetid://126309628188296"
+                })
+
+                task.delay(1, function()
+                    if hrp then hrp.Anchored = false end
+                end)
+            end
+        end
+    })
+end
+
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+-- Xóa GUI cũ nếu đã tồn tại
+local old = game:GetService("CoreGui"):FindFirstChild("FPSPingDisplay")
+if old then
+	old:Destroy()
+end
+
+-- Tạo GUI mới
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FPSPingDisplay"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 999999
+screenGui.Enabled = true
+
+pcall(function()
+	screenGui.Parent = game:GetService("CoreGui")
+end)
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 240, 0, 100)
+mainFrame.Position = UDim2.new(0, 10, 0, 10)
+mainFrame.BackgroundTransparency = 1
+mainFrame.Parent = screenGui
+
+-- Tạo dòng text
+local function createRow(y)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(1, 0, 0, 30)
+	row.Position = UDim2.new(0, 0, 0, y)
+	row.BackgroundTransparency = 1
+	row.Parent = mainFrame
+
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = row
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0, 50, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 24
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextStrokeTransparency = 0.5
+	label.Parent = row
+
+	local value = label:Clone()
+	value.Size = UDim2.new(1, -50, 1, 0)
+	value.Parent = row
+
+	return label, value
+end
+
+local fpsLabel, fpsValue = createRow(0)
+local pingLabel, pingValue = createRow(30)
+local timeLabel, timeValue = createRow(60)
+
+fpsLabel.Text = "FPS:"
+pingLabel.Text = "Ping:"
+timeLabel.Text = "Time:"
+
+-- Hiệu ứng rainbow
+local function rainbow(offset)
+	local t = tick()
+	local r = 0.5 + 0.5 * math.sin(t * 3 + offset)
+	local g = 0.5 + 0.5 * math.sin(t * 3 + offset + 2)
+	local b = 0.5 + 0.5 * math.sin(t * 3 + offset + 4)
+	return Color3.new(r, g, b)
+end
+
+-- Luồng riêng để update UI
+task.spawn(function()
+	local fps, count, last = 0, 0, tick()
+
+	RunService.RenderStepped:Connect(function()
+		if not screenGui.Enabled then return end
+
+		count += 1
+		local now = tick()
+
+		if now - last >= 1 then
+			fps = count
+			count = 0
+			last = now
+
+			local pingStat = Stats:FindFirstChild("Network") and Stats.Network:FindFirstChild("ServerStatsItem")
+			local ping = pingStat and pingStat["Data Ping"]:GetValue() or 0
+			pingValue.Text = math.floor(ping + 0.5) .. " ms"
+			fpsValue.Text = tostring(fps)
+		end
+
+		local t = os.date("*t")
+		timeValue.Text = string.format("%02d:%02d:%02d", t.hour, t.min, t.sec)
+
+		-- Rainbow màu
+		fpsLabel.TextColor3 = rainbow(0)
+		fpsValue.TextColor3 = rainbow(1)
+		pingLabel.TextColor3 = rainbow(2)
+		pingValue.TextColor3 = rainbow(3)
+		timeLabel.TextColor3 = rainbow(4)
+		timeValue.TextColor3 = rainbow(5)
+	end)
+end)
+
+task.spawn(function()
+    task.wait(1) -- Đảm bảo UI đã vẽ xong
+
+    -- Gọi lại callback bằng cách bật rồi tắt toggle
+    local function reTrigger(flag)
+        local toggle = Rayfield.Flags[flag]
+        if toggle then
+            toggle:Set(false)
+            task.wait(0.05)
+            toggle:Set(true)
+        end
+    end
+
+    -- Chạy lại các script toggleList (MainTab)
+    for _, t in ipairs(toggleList) do
+        if settings[t.Key] then
+            reTrigger(t.Key)
+        end
+    end
+
+    -- Gọi lại toggle tính năng MiscTab
+    local miscFlags = {
+        "AutoClick",
+        "AutoAttack",
+        "AutoLoadScript",
+        "SpecialScript",
+        "BypassCooldown",
+        "AutoHideUI" -- 🆕 Thêm dòng này
+    }
+
+    for _, flag in ipairs(miscFlags) do
+        if settings[flag] then
+            reTrigger(flag)
+        end
+    end
+
+    -- Nếu bật AutoHideUI thì gửi phím K
+    if settings["AutoHideUI"] then
+        task.wait(1) -- Đảm bảo UI đã load hoàn chỉnh
+        local vu = game:GetService("VirtualInputManager")
+        vu:SendKeyEvent(true, Enum.KeyCode.K, false, game)
+        vu:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+    end
+
+    -- Nếu bật BypassCooldown thì patch lại module (vì không thể rely hoàn toàn vào toggle)
+    if settings["BypassCooldown"] then
+        task.spawn(function()
+            local replicated = game:GetService("ReplicatedStorage")
+            local success, module = pcall(function()
+                return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
+            end)
+            if success and module then
+                module.Verify = function(...) return true end
+                module.VerifyPower = function(...) return true end
+                module.VerifyNpc = function(...) return true end
+                module.VerifyPlayer = function(...) return true end
+                module.VerifyPowerPlayer = function(...) return true end
+            end
+        end)
+    end
+end)
+
+local UIS = game:GetService("UserInputService")
+
+-- Tạo ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "ImageButtonGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+pcall(function()
+	gui.Parent = game:GetService("CoreGui")
+end)
+
+-- Tạo ImageButton
+local btn = Instance.new("ImageButton")
+btn.Name = "KButton"
+btn.Size = UDim2.new(0, 40, 0, 40)
+btn.Position = UDim2.new(1, -40, 0.5, -25) -- Bên phải giữa màn hình
+btn.BackgroundTransparency = 1
+btn.Image = "rbxassetid://126309628188296" -- Bạn có thể thay icon khác nếu muốn
+btn.Parent = gui
+
+-- Khi click, giả lập phím K
+btn.MouseButton1Click:Connect(function()
+	local vu = game:GetService("VirtualInputManager")
+	vu:SendKeyEvent(true, Enum.KeyCode.K, false, game)
+	vu:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+end)
+
+-- Anti-AFK Script (Auto Execute Version)
+local vu = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    vu:CaptureController()
+    vu:ClickButton2(Vector2.new(0, 0))
+end)
+end
