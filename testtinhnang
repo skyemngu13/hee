@@ -92,9 +92,6 @@ if success and extraFunctionsModule then
     end
 end
 
--- 🪟 Load Rayfield
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
 local Window = Rayfield:CreateWindow({
     Name = "Pịa Hub - Vãi Pịa 💩",
     LoadingTitle = "Đang tải GUI...",
