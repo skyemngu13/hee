@@ -331,41 +331,37 @@ MiscTab:CreateToggle({
     Flag = "AutoClick",
     Callback = function(val)
         settings["AutoClick"] = val
+        autoClicking = val
         saveSettings()
-
-        if val then
-            autoClicking = true
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            local Player = game:GetService("Players").LocalPlayer
-            local SharedModules = ReplicatedStorage.SharedModules
-
-            require(SharedModules.Others.GuiFunctions)
-            local WeaponsModule = require(SharedModules.WeaponsModule)
-
-            repeat task.wait(1) until Player:GetAttribute("Loaded") == true
-
-            task.spawn(function()
-                while autoClicking do
-                    task.wait(0.1)
-
-                    if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
-                        task.wait(0.2)
-                    end
-
-                    if Player:GetAttribute("AutoClick") ~= true then
-                        Player:SetAttribute("AutoClick", true)
-                    end
-
-                    WeaponsModule.Click({
-                        ["KeyCode"] = Enum.KeyCode.ButtonX
-                    }, false, nil, true)
-                end
-            end)
-        else
-            autoClicking = false
-        end
     end
 })
+
+-- Luồng xử lý AutoClick
+task.spawn(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Player = game:GetService("Players").LocalPlayer
+    local SharedModules = ReplicatedStorage:WaitForChild("SharedModules")
+    local WeaponsModule = require(SharedModules:WaitForChild("WeaponsModule"))
+
+    repeat task.wait(1) until Player:GetAttribute("Loaded") == true
+
+    while true do
+        task.wait(0.1)
+        if autoClicking then
+            if Player.leaderstats:FindFirstChild("Passes") and Player.leaderstats.Passes:GetAttribute("AutoClicker") ~= true then
+                task.wait(0.2)
+            end
+
+            if Player:GetAttribute("AutoClick") ~= true then
+                Player:SetAttribute("AutoClick", true)
+            end
+
+            WeaponsModule.Click({
+                ["KeyCode"] = Enum.KeyCode.ButtonX
+            }, false, nil, true)
+        end
+    end
+end)
 
 settings["AutoAttack"] = settings["AutoAttack"] or false
 
@@ -598,25 +594,47 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    task.wait(1) -- Đảm bảo UI vẽ xong
+    task.wait(1) -- Đảm bảo UI đã vẽ xong
 
-    -- Chạy các script đã bật từ toggleList
-    for _, t in ipairs(toggleList) do
-        if settings[t.Key] then
-            pcall(function()
-                loadstring(game:HttpGet(t.Script))()
-            end)
+    -- Gọi lại callback bằng cách bật rồi tắt toggle
+    local function reTrigger(flag)
+        local toggle = Rayfield.Flags[flag]
+        if toggle then
+            toggle:Set(false)
+            task.wait(0.05)
+            toggle:Set(true)
         end
     end
 
-    -- Kiểm tra BypassCooldown
+    -- Chạy lại các script toggleList (MainTab)
+    for _, t in ipairs(toggleList) do
+        if settings[t.Key] then
+            reTrigger(t.Key)
+        end
+    end
+
+    -- Gọi lại toggle tính năng MiscTab
+    local miscFlags = {
+        "AutoClick",
+        "AutoAttack",
+        "AutoLoadScript",
+        "SpecialScript",
+        "BypassCooldown"
+    }
+
+    for _, flag in ipairs(miscFlags) do
+        if settings[flag] then
+            reTrigger(flag)
+        end
+    end
+
+    -- Nếu bật BypassCooldown thì patch lại module (vì không thể rely hoàn toàn vào toggle)
     if settings["BypassCooldown"] then
         task.spawn(function()
             local replicated = game:GetService("ReplicatedStorage")
             local success, module = pcall(function()
                 return require(replicated:WaitForChild("SharedModules"):WaitForChild("CooldownModule"))
             end)
-
             if success and module then
                 module.Verify = function(...) return true end
                 module.VerifyPower = function(...) return true end
@@ -625,23 +643,6 @@ task.spawn(function()
                 module.VerifyPowerPlayer = function(...) return true end
             end
         end)
-    end
-
-    -- Auto set Flag cho các Toggle trong MiscTab khi load file
-    if settings["AutoClick"] and Rayfield.Flags["AutoClick"] then
-        Rayfield.Flags["AutoClick"]:Set(true)
-    end
-    if settings["AutoAttack"] and Rayfield.Flags["AutoAttack"] then
-        Rayfield.Flags["AutoAttack"]:Set(true)
-    end
-    if settings["AutoLoadScript"] and Rayfield.Flags["AutoLoadScript"] then
-        Rayfield.Flags["AutoLoadScript"]:Set(true)
-    end
-    if settings["BypassCooldown"] and Rayfield.Flags["BypassCooldown"] then
-        Rayfield.Flags["BypassCooldown"]:Set(true)
-    end
-    if settings["SpecialScript"] and Rayfield.Flags["SpecialScript"] then
-        Rayfield.Flags["SpecialScript"]:Set(true)
     end
 end)
 
