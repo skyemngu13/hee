@@ -450,6 +450,28 @@ MiscTab:CreateToggle({
     end
 })
 
+settings["AutoHideUI"] = settings["AutoHideUI"] or false
+
+MiscTab:CreateToggle({
+    Name = "Auto Hide UI",
+    CurrentValue = settings["AutoHideUI"],
+    Flag = "AutoHideUI",
+    Callback = function(val)
+        settings["AutoHideUI"] = val
+        saveSettings()
+    end
+})
+
+-- 🕹️ Nếu bật Auto Hide UI thì gửi phím K khi load
+task.spawn(function()
+    task.wait(2)
+    if settings["AutoHideUI"] then
+        local vu = game:GetService("VirtualInputManager")
+        vu:SendKeyEvent(true, Enum.KeyCode.K, false, game)
+        vu:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+    end
+end)
+
 local teleportData = {
     {Name = "Solo lvl", Position = CFrame.new(577.968262, 27.9623756, 261.452271)},
     {Name = "Naruto", Position = CFrame.new(-3380.2373, 29.8265285, 2257.26196)},
