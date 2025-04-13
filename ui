@@ -26,13 +26,18 @@ function RectUI:CreateWindow(config)
 
     local main = create("Frame", {
         Size = size,
-        Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(0.5, 0.5),
         Name = "Main",
         Parent = screen
     })
+
+    -- Bo góc nhẹ
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = main
 
     local topBar = create("TextLabel", {
         Size = UDim2.new(1, 0, 0, 35),
@@ -71,19 +76,21 @@ function RectUI:CreateWindow(config)
         end
     end)
 
-    -- Drag top bar
+    -- Drag toàn bộ frame
     local dragging, offset
-    topBar.InputBegan:Connect(function(input)
+    main.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            offset = input.Position - main.Position
+            offset = input.Position - main.AbsolutePosition
         end
     end)
-    topBar.InputEnded:Connect(function(input)
+
+    main.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
+
     UIS.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             main.Position = UDim2.new(0, input.Position.X - offset.X, 0, input.Position.Y - offset.Y)
@@ -156,7 +163,6 @@ function RectUI:CreateWindow(config)
                 return {
                     Container = tabContent,
                     Layout = layout
-                    -- Sau này thêm: AddToggle, AddButton, v.v...
                 }
             end
         }
