@@ -15,7 +15,6 @@ function Orion:CreateOrion(orionName)
     local header = Instance.new("Frame")
     local mainCorner_4 = Instance.new("UICorner")
     local libTitle = Instance.new("TextLabel")
-    local closeLib = Instance.new("ImageButton")
     local elementContainer = Instance.new("Frame")
     local mainCorner_5 = Instance.new("UICorner")
     local mainList = Instance.new("UIListLayout")
@@ -123,42 +122,6 @@ end)
     libTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     libTitle.TextSize = 18.000
     libTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-    closeLib.Name = "closeLib"
-    closeLib.Parent = header
-    closeLib.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    closeLib.BackgroundTransparency = 1.000
-    closeLib.Position = UDim2.new(0.91911763, 0, 0.209302321, 0)
-    closeLib.Size = UDim2.new(0, 25, 0, 25)
-    closeLib.Image = "rbxassetid://4988112250"
-    closeLib.MouseButton1Click:Connect(function()
-        isClosed = not isClosed
-        if isClosed then
-            closeLib.Image = "rbxassetid://5165666242"
-            game.TweenService:Create(closeLib, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                Rotation = 360
-            }):Play()
-            MainWhiteFrame:TweenSize(UDim2.new(0, 424,0, 58), "In", "Linear", 0.12)
-            game.TweenService:Create(MainWhiteFrame_2, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                BackgroundTransparency = 1
-            }):Play()
-            game.TweenService:Create(MainWhiteFrame, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                BackgroundTransparency = 1
-            }):Play()
-        else
-            closeLib.Image = "rbxassetid://4988112250"
-            game.TweenService:Create(closeLib, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                Rotation = 0
-            }):Play()
-            MainWhiteFrame:TweenSize(UDim2.new(0, 528,0, 310), "In", "Linear", 0.12)
-            game.TweenService:Create(MainWhiteFrame_2, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                BackgroundTransparency = 0
-            }):Play()
-            game.TweenService:Create(MainWhiteFrame, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                BackgroundTransparency = 0
-            }):Play()
-        end
-    end)
 
     elementContainer.Name = "elementContainer"
     elementContainer.Parent = MainWhiteFrame_2
