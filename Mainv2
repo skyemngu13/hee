@@ -120,20 +120,16 @@ for _, t in ipairs(toggleList) do
 end
 
 MainTab:CreateLabel("Auto Farm all mode")
--- ⚙️ Cài đặt mặc định
 settings["AutoFarm"] = settings["AutoFarm"] or false
 settings["FarmScales"] = settings["FarmScales"] or {"Normal", "Big"}
 settings["FarmDelay"] = tonumber(settings["FarmDelay"]) or 0.2
 
-local autoFarm = settings["AutoFarm"]
-
 -- 🔘 Toggle Auto Farm
 MainTab:CreateToggle({
     Name = "🗡 Auto Farm",
-    CurrentValue = autoFarm,
+    CurrentValue = settings["AutoFarm"],
     Flag = "AutoFarm",
     Callback = function(val)
-        autoFarm = val
         settings["AutoFarm"] = val
         saveSettings()
     end
@@ -160,13 +156,16 @@ MainTab:CreateInput({
     Default = tostring(settings["FarmDelay"]),
     Callback = function(val)
         local num = tonumber(val)
-        if num then
+        if num and num > 0 then
             settings["FarmDelay"] = num
             saveSettings()
+        else
+            warn("Delay không hợp lệ:", val)
         end
     end
 })
 
+-- 🌟 Auto Farm logic
 task.spawn(function()
     local Players = game:GetService("Players")
     local player = Players.LocalPlayer
@@ -177,7 +176,7 @@ task.spawn(function()
     local enemiesServer = enemiesRoot:WaitForChild("Server")
     local enemiesClient = enemiesRoot:WaitForChild("Client")
 
-    -- Map scale từ tên dropdown sang giá trị
+    -- Map scale từ tên dropdown sang giá trị số
     local scaleMap = {
         ["Normal"] = 1,
         ["Big"] = 2
@@ -195,7 +194,6 @@ task.spawn(function()
         return false
     end
 
-    -- Tìm mob gần nhất: lấy Part ở Server, Model ở Client nếu có
     local function findNearestMob()
         local nearestPart, nearestModel, minDist = nil, nil, math.huge
 
@@ -206,19 +204,16 @@ task.spawn(function()
                 local uuid = uuidPart.Name
                 local clientModel = enemiesClient:FindFirstChild(uuid, true)
 
-                -- Ưu tiên dùng vị trí của model nếu có, nếu không dùng Part
-                local pos
+                local pos = uuidPart.Position
                 if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
                     pos = clientModel.HumanoidRootPart.Position
-                else
-                    pos = uuidPart.Position
                 end
 
                 local dist = (pos - rootPart.Position).Magnitude
                 if dist < minDist then
                     minDist = dist
                     nearestPart = uuidPart
-                    nearestModel = clientModel -- có thể là nil, không sao
+                    nearestModel = clientModel
                 end
             end
         end
@@ -238,7 +233,6 @@ task.spawn(function()
         return nearestModel, nearestPart
     end
 
-    -- Teleport tới mob (model hoặc part)
     local function teleportNearMob(pos)
         if typeof(pos) ~= "Vector3" then return end
         local dirVector = (rootPart.Position - pos)
@@ -253,7 +247,6 @@ task.spawn(function()
         rootPart.CFrame = CFrame.new(pos + offset, pos)
     end
 
-    -- Xử lý mob
     local function handleMob(model, part)
         if not part then return end
 
@@ -266,7 +259,7 @@ task.spawn(function()
             return nil
         end
 
-        while autoFarm and part:IsDescendantOf(workspace) and (part:GetAttribute("HP") or 0) > 0 do
+        while settings["AutoFarm"] and part:IsDescendantOf(workspace) and (part:GetAttribute("HP") or 0) > 0 do
             local targetPos = getTargetPosition()
             if targetPos then
                 local dist = (targetPos - rootPart.Position).Magnitude
@@ -277,12 +270,13 @@ task.spawn(function()
             task.wait(0.1)
         end
 
+        -- ✅ Delay luôn dùng giá trị mới nhất
         task.wait(settings["FarmDelay"] or 0.2)
     end
 
-    -- Vòng lặp chính
+    -- 🔁 Vòng lặp chính
     while true do
-        if autoFarm then
+        if settings["AutoFarm"] then
             local model, part = findNearestMob()
             if part then
                 handleMob(model, part)
