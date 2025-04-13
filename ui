@@ -396,21 +396,30 @@ ScreenGui.Parent = game.CoreGui
                 UIListLayout_2.SortOrder = Enum.SortOrder.LayoutOrder
                 UIListLayout_2.VerticalAlignment = Enum.VerticalAlignment.Center
 
-                local toggled = false
-                toggleBtn.MouseButton1Click:Connect(function()
-                    toggled = not toggled
-                    callback(toggled)
-                    if toggled then
-                        game.TweenService:Create(toggleBtn, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-                            BackgroundColor3 = Color3.fromRGB(181, 1, 31)
-                        }):Play()
-                    else
-                        game.TweenService:Create(toggleBtn, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),{
-                            BackgroundColor3 = Color3.fromRGB(25,25,25)
-                        }):Play()
-                    end 
-                end)
-            end
+                local toggled = options.Default or false
+
+if options.Flag and options.Save then
+    toggled = settings[options.Flag] or options.Default or false
+end
+
+callback(toggled)
+if toggled then
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(181, 1, 31)
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    toggled = not toggled
+    callback(toggled)
+
+    if options.Flag and options.Save then
+        settings[options.Flag] = toggled
+        saveSettings()
+    end
+
+    game.TweenService:Create(toggleBtn, TweenInfo.new(0.18), {
+        BackgroundColor3 = toggled and Color3.fromRGB(181, 1, 31) or Color3.fromRGB(25, 25, 25)
+    }):Play()
+end)
 
                 function ElementHandler:Slider(sliderin, minvalue, maxvalue, callback)
                     minvalue = minvalue or 0
@@ -681,12 +690,21 @@ ScreenGui.Parent = game.CoreGui
                                 UIListLayout_2.SortOrder = Enum.SortOrder.LayoutOrder
                                 UIListLayout_2.VerticalAlignment = Enum.VerticalAlignment.Center
 
-                                TextBox.FocusLost:Connect(function(EnterPressed)
-                                    if not EnterPressed then return end
-                                    callback(TextBox.Text)
-                                    TextBox.Text = ""
-                                end)
-                            end 
+                                TextBox.Text = (options.Default and tostring(options.Default)) or ""
+
+if options.Flag and options.Save and settings[options.Flag] then
+    TextBox.Text = tostring(settings[options.Flag])
+end
+
+TextBox.FocusLost:Connect(function(EnterPressed)
+    if not EnterPressed then return end
+    callback(TextBox.Text)
+
+    if options.Flag and options.Save then
+        settings[options.Flag] = TextBox.Text
+        saveSettings()
+    end
+end)
 
                                 function ElementHandler:Dropdown(dInfo, list, callback)
                                     dInfo = dInfo or ""
@@ -732,7 +750,11 @@ ScreenGui.Parent = game.CoreGui
                                     dropdownItem.Position = UDim2.new(0.0223523453, 0, 0, 0)
                                     dropdownItem.Size = UDim2.new(0, 291, 0, 41)
                                     dropdownItem.Font = Enum.Font.GothamSemibold
-                                    dropdownItem.Text = dInfo
+                                    if options.Flag and options.Save and settings[options.Flag] then
+    dropdownItem.Text = dInfo .. ": " .. settings[options.Flag]
+else
+    dropdownItem.Text = dInfo
+end
                                     dropdownItem.TextColor3 = Color3.fromRGB(255, 1, 43)
                                     dropdownItem.TextSize = 14.000
                                     dropdownItem.TextXAlignment = Enum.TextXAlignment.Left
@@ -790,17 +812,24 @@ ScreenGui.Parent = game.CoreGui
                                         mainCorner_3.Parent = optionBtn
 
                                         optionBtn.MouseButton1Click:Connect(function()
-                                            callback(v)
-                                            dropdownItem.Text = dInfo..": "..v
-                                            dropDownFrame:TweenSize(UDim2.new(0, 394, 0, 42), "In", "Quint", 0.10)
-                                            wait(0.10)
-                                            UpdateSize()
-                                            game.TweenService:Create(ImageButton, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In),{
-                                                Rotation = 0
-                                            }):Play()
-                                            isDropped = false
-                                        end)
-                                    end
+    callback(v)
+    dropdownItem.Text = dInfo .. ": " .. v
+
+    if options.Flag and options.Save then
+        settings[options.Flag] = v
+        saveSettings()
+    end
+
+    dropDownFrame:TweenSize(UDim2.new(0, 394, 0, 42), "In", "Quint", 0.10)
+    task.wait(0.10)
+    UpdateSize()
+
+    game.TweenService:Create(ImageButton, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Rotation = 0
+    }):Play()
+
+    isDropped = false
+end)
         end
         function ElementHandler:MultiDropdown(dInfo, list, defaultSelected, callback)
     dInfo = dInfo or ""
