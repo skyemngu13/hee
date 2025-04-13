@@ -1,0 +1,168 @@
+local RectUI = {}
+RectUI.__index = RectUI
+
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+
+local function create(class, props)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        obj[k] = v
+    end
+    return obj
+end
+
+function RectUI:CreateWindow(config)
+    local title = config.Title or "RectUI"
+    local size = config.Size or UDim2.new(0, 500, 0, 400)
+    local keybind = config.ToggleKey or Enum.KeyCode.RightShift
+
+    local screen = create("ScreenGui", {
+        Name = "RectUI",
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        Parent = game:GetService("CoreGui"),
+    })
+
+    local main = create("Frame", {
+        Size = size,
+        Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Name = "Main",
+        Parent = screen
+    })
+
+    local topBar = create("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 35),
+        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        Text = title,
+        Font = Enum.Font.GothamBold,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 16,
+        Name = "TopBar",
+        Parent = main
+    })
+
+    local tabContainer = create("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, 35),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        Name = "TabContainer",
+        Parent = main
+    })
+
+    local content = create("Frame", {
+        Size = UDim2.new(1, 0, 1, -65),
+        Position = UDim2.new(0, 0, 0, 65),
+        BackgroundTransparency = 1,
+        Name = "Content",
+        Parent = main
+    })
+
+    local tabs = {}
+    local currentTab = nil
+
+    -- Ẩn/hiện GUI
+    UIS.InputBegan:Connect(function(input)
+        if input.KeyCode == keybind then
+            main.Visible = not main.Visible
+        end
+    end)
+
+    -- Drag top bar
+    local dragging, offset
+    topBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            offset = input.Position - main.Position
+        end
+    end)
+    topBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            main.Position = UDim2.new(0, input.Position.X - offset.X, 0, input.Position.Y - offset.Y)
+        end
+    end)
+
+    -- Giao diện window trả ra
+    local window = {}
+
+    function window:CreateTab(tabName)
+        local tabButton = create("TextButton", {
+            Size = UDim2.new(0, 100, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+            Text = tabName,
+            Font = Enum.Font.Gotham,
+            TextSize = 14,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Parent = tabContainer
+        })
+
+        local tabContent = create("ScrollingFrame", {
+            Size = UDim2.new(1, -10, 1, -10),
+            Position = UDim2.new(0, 5, 0, 5),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1,
+            ScrollBarThickness = 6,
+            Visible = false,
+            Parent = content
+        })
+
+        local layout = Instance.new("UIListLayout", tabContent)
+        layout.Padding = UDim.new(0, 6)
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+        tabButton.MouseButton1Click:Connect(function()
+            for _, tab in pairs(tabs) do
+                tab.Content.Visible = false
+            end
+            tabContent.Visible = true
+            currentTab = tabContent
+        end)
+
+        tabs[tabName] = {
+            Button = tabButton,
+            Content = tabContent
+        }
+
+        return {
+            CreateSection = function(_, title)
+                local section = create("Frame", {
+                    Size = UDim2.new(1, -10, 0, 30),
+                    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+                    BorderSizePixel = 0,
+                    LayoutOrder = 1,
+                    Parent = tabContent
+                })
+
+                local titleLabel = create("TextLabel", {
+                    Size = UDim2.new(1, -10, 0, 30),
+                    Position = UDim2.new(0, 5, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = title,
+                    Font = Enum.Font.GothamSemibold,
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextColor3 = Color3.fromRGB(255, 255, 255),
+                    Parent = section
+                })
+
+                return {
+                    Container = tabContent,
+                    Layout = layout
+                    -- Sau này thêm: AddToggle, AddButton, v.v...
+                }
+            end
+        }
+    end
+
+    return window
+end
+
+return RectUI
