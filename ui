@@ -1087,21 +1087,31 @@ end)
 				end
 				return Slider
 			end  
-			function ElementFunction:AddDropdown(DropdownConfig)
-				DropdownConfig = DropdownConfig or {}
-				DropdownConfig.Name = DropdownConfig.Name or "Dropdown"
-				DropdownConfig.Options = DropdownConfig.Options or {}
-				DropdownConfig.Default = DropdownConfig.Default or ""
-				DropdownConfig.Callback = DropdownConfig.Callback or function() end
-				DropdownConfig.Flag = DropdownConfig.Flag or nil
-				DropdownConfig.Save = DropdownConfig.Save or false
+			function ElementFunction:AddMultiDropdown(MultiDropdownConfig)
+	MultiDropdownConfig = MultiDropdownConfig or {}
+	MultiDropdownConfig.Name = MultiDropdownConfig.Name or "MultiDropdown"
+	MultiDropdownConfig.Options = MultiDropdownConfig.Options or {}
+	MultiDropdownConfig.Default = MultiDropdownConfig.Default or {}
+	MultiDropdownConfig.Callback = MultiDropdownConfig.Callback or function() end
+	MultiDropdownConfig.Flag = MultiDropdownConfig.Flag or nil
+	MultiDropdownConfig.Save = MultiDropdownConfig.Save or false
 
-				local Dropdown = {Value = DropdownConfig.Default, Options = DropdownConfig.Options, Buttons = {}, Toggled = false, Type = "Dropdown", Save = DropdownConfig.Save}
-				local MaxElements = 5
+	local Dropdown = {
+		Selected = {}, -- chứa các lựa chọn được chọn
+		Options = MultiDropdownConfig.Options,
+		Buttons = {},
+		Toggled = false,
+		Type = "MultiDropdown",
+		Save = MultiDropdownConfig.Save
+	}
 
-				if not table.find(Dropdown.Options, Dropdown.Value) then
-					Dropdown.Value = "..."
-				end
+	-- Gán các lựa chọn mặc định
+	for _, val in ipairs(MultiDropdownConfig.Default) do
+		if table.find(Dropdown.Options, val) then
+			table.insert(Dropdown.Selected, val)
+		end
+	end
+
 
 				local DropdownList = MakeElement("List")
 
