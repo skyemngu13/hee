@@ -56,7 +56,13 @@ end)
         end
     end)
 
-    ScreenGui.Parent = game.CoreGui
+  -- Xoá GUI cũ nếu có
+if game.CoreGui:FindFirstChild("Orion") then
+    game.CoreGui.Orion:Destroy()
+end
+
+ScreenGui.Name = "Orion" -- hoặc tên GUI của bạn
+ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     MainWhiteFrame.Name = "MainWhiteFrame"
