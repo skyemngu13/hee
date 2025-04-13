@@ -844,32 +844,54 @@ end)
     end
 
     local dropDownFrame = Instance.new("Frame")
-    local UIListLayout = Instance.new("UIListLayout")
     dropDownFrame.Parent = newPage
-    dropDownFrame.Size = UDim2.new(0, 394, 0, 42 + (#list * 35))
     dropDownFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    dropDownFrame.Size = UDim2.new(0, 394, 0, 42)
+    dropDownFrame.ClipsDescendants = true
 
+    local UIListLayout = Instance.new("UIListLayout")
     UIListLayout.Parent = dropDownFrame
     UIListLayout.Padding = UDim.new(0, 5)
 
-    local label = Instance.new("TextLabel")
-    label.Parent = dropDownFrame
-    label.Text = dInfo
-    label.Size = UDim2.new(1, 0, 0, 30)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1, 0, 0)
+    local header = Instance.new("TextButton")
+    header.Parent = dropDownFrame
+    header.Size = UDim2.new(1, 0, 0, 42)
+    header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    header.TextColor3 = Color3.fromRGB(255, 1, 43)
+    header.Font = Enum.Font.GothamSemibold
+    header.TextSize = 14
+    header.TextXAlignment = Enum.TextXAlignment.Left
+    header.Text = dInfo
+
+    local opened = false
+    local options = {}
+
+    local function updateHeader()
+        local text = {}
+        for item, isSel in pairs(selected) do
+            if isSel then table.insert(text, item) end
+        end
+        header.Text = dInfo .. ": " .. (#text > 0 and table.concat(text, ", ") or "None")
+    end
+
+    updateHeader()
 
     for _, option in ipairs(list) do
-        local button = Instance.new("TextButton")
-        button.Parent = dropDownFrame
-        button.Size = UDim2.new(1, -10, 0, 30)
-        button.Text = option
-        button.BackgroundColor3 = selected[option] and Color3.fromRGB(181,1,31) or Color3.fromRGB(40,40,40)
-        button.TextColor3 = Color3.new(1,1,1)
+        local btn = Instance.new("TextButton")
+        btn.Parent = dropDownFrame
+        btn.Size = UDim2.new(1, -10, 0, 30)
+        btn.Text = option
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextSize = 13
+        btn.BackgroundColor3 = selected[option] and Color3.fromRGB(181,1,31) or Color3.fromRGB(40,40,40)
+        btn.Visible = false
+        options[#options+1] = btn
 
-        button.MouseButton1Click:Connect(function()
+        btn.MouseButton1Click:Connect(function()
             selected[option] = not selected[option]
-            button.BackgroundColor3 = selected[option] and Color3.fromRGB(181,1,31) or Color3.fromRGB(40,40,40)
+            btn.BackgroundColor3 = selected[option] and Color3.fromRGB(181,1,31) or Color3.fromRGB(40,40,40)
+            updateHeader()
 
             local result = {}
             for key, val in pairs(selected) do
@@ -878,8 +900,19 @@ end)
             callback(result)
         end)
     end
-end
 
+    header.MouseButton1Click:Connect(function()
+        opened = not opened
+        for _, btn in pairs(options) do
+            btn.Visible = opened
+        end
+
+        local newHeight = opened and (42 + #options * 35) or 42
+        game.TweenService:Create(dropDownFrame, TweenInfo.new(0.2), {
+            Size = UDim2.new(0, 394, 0, newHeight)
+        }):Play()
+    end)
+end
         return ElementHandler
     end
     return SectionHandler
