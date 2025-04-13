@@ -12,6 +12,7 @@ function Orion:CreateOrion(orionName)
     local tabFrame = Instance.new("Frame")
     local tabList = Instance.new("UIListLayout")
     local tabPadd = Instance.new("UIPadding")
+    local header = Instance.new("Frame")
     local mainCorner_4 = Instance.new("UICorner")
     local libTitle = Instance.new("TextLabel")
     local elementContainer = Instance.new("Frame")
@@ -99,6 +100,12 @@ end)
     tabPadd.Parent = tabFrame
     tabPadd.PaddingRight = UDim.new(0, 2)
     tabPadd.PaddingTop = UDim.new(0, 5)
+
+    header.Name = "header"
+    header.Parent = MainWhiteFrame_2
+    header.BackgroundColor3 = Color3.fromRGB(181, 1, 31)
+    header.Position = UDim2.new(0.207619041, 0, 0.0258064512, 0)
+    header.Size = UDim2.new(0, 408, 0, 43)
 
     mainCorner_4.CornerRadius = UDim.new(0, 3)
     mainCorner_4.Name = "mainCorner"
