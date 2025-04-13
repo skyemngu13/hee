@@ -95,6 +95,7 @@ local InfoTab = Window:CreateTab("Info", 83969479610474)
 local MainTab = Window:CreateTab("Main", 124598949660449)
 local DungeonTab = Window:CreateTab("Dungeon", 106229124186030)
 local MiscTab = Window:CreateTab("Misc", 95758233681936)
+local ShopTab = Window:CreateTab("Shop", 126309628188296)
 local TeleportTab = Window:CreateTab("Teleport", 136059427982959)
 
 MiscTab:CreateToggle({
@@ -890,6 +891,178 @@ MiscTab:CreateToggle({
         end
     end
 })
+
+ShopTab:CreateLabel("Auto Upgrade")
+-- Xử lý upgrade
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+local isAutoUpgrading = false
+
+-- Toggle auto upgrade
+ShopTab:CreateToggle({
+    Name = "Auto Upgrade Weapon",
+    CurrentValue = false,
+    Callback = function(state)
+        isAutoUpgrading = state
+
+        if state then
+            -- Mở GUI như cách dust đã làm
+            local openInventory = {
+                [1] = {
+                    [1] = { Event = "OpenInventory" },
+                    [2] = "\n"
+                }
+            }
+            local openUpgrade = {
+                [1] = {
+                    [1] = { Event = "OpenShop", Shop = "UpgradeShop" },
+                    [2] = "\n"
+                }
+            }
+            remote:FireServer(unpack(openInventory))
+            remote:FireServer(unpack(openUpgrade))
+        else
+            -- Đóng GUI nếu cần
+            local close = {
+                [1] = {
+                    [1] = { Event = "CloseShop" },
+                    [2] = "\n"
+                }
+            }
+            remote:FireServer(unpack(close))
+        end
+    end
+})
+
+-- Auto loop để gửi upgrade remote
+task.spawn(function()
+    while true do
+        if isAutoUpgrading then
+            -- Lấy danh sách vũ khí từ inventory
+            local inventory = player.leaderstats.Inventory.Weapons:GetChildren()
+            local selected = {}
+
+            for _, weapon in pairs(inventory) do
+                if weapon:GetAttribute("Name") == "DualKando" then
+                    table.insert(selected, weapon.Name)
+                end
+                if #selected >= 3 then break end
+            end
+
+            if #selected == 3 then
+                local args = {
+                    [1] = {
+                        [1] = {
+                            ["Type"] = "DualKando",
+                            ["BuyType"] = "Gems",
+                            ["Weapons"] = {
+                                selected[1],
+                                selected[2],
+                                selected[3]
+                            },
+                            ["Event"] = "UpgradeWeapon",
+                            ["Level"] = 3
+                        },
+                        [2] = "\n"
+                    }
+                }
+
+                pcall(function()
+                    remote:FireServer(unpack(args))
+                end)
+            end
+        end
+        task.wait(1)
+    end
+end)
+
+ShopTab:CreateLabel("Đổi DUST")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local remote = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+local exchangeOptions = {
+    ["10 rare = 1 legend"] = "EnchLegendary",
+    ["1 legend = 1 rare"] = "EnchRare2",
+    ["10 common = 1 rare"] = "EnchRare"
+}
+
+local selectedExchange = "EnchLegendary"
+local isExchanging = false
+
+-- Dropdown ở ShopTab
+ShopTab:CreateDropdown({
+    Name = "Loại đổi Enchant",
+    Options = {"10 rare = 1 legend", "1 legend = 1 rare", "10 common = 1 rare"},
+    CurrentOption = "10 rare = 1 legend",
+    Flag = "EnchantType",
+    Callback = function(option)
+        if typeof(option) == "table" then
+            option = option[1]
+        end
+        selectedExchange = exchangeOptions[option]
+    end
+})
+
+-- Toggle ở ShopTab
+ShopTab:CreateToggle({
+    Name = "Auto Exchange Enchant",
+    CurrentValue = false,
+    Flag = "AutoExchangeEnchant",
+    Callback = function(val)
+        isExchanging = val
+        if val then
+            -- Mở GUI
+            local openGUIArgs = {
+                [1] = {
+                    [1] = {
+                        ["Shop"] = "ExchangeShop",
+                        ["Event"] = "OpenShop"
+                    },
+                    [2] = "\n"
+                }
+            }
+            remote:FireServer(unpack(openGUIArgs))
+        else
+            -- Đóng GUI
+            local closeGUIArgs = {
+                [1] = {
+                    [1] = {
+                        ["Event"] = "CloseShop"
+                    },
+                    [2] = "\n"
+                }
+            }
+            remote:FireServer(unpack(closeGUIArgs))
+        end
+    end
+})
+
+-- Vòng lặp thực hiện đổi
+task.spawn(function()
+    while true do
+        if isExchanging and selectedExchange then
+            local args = {
+                [1] = {
+                    [1] = {
+                        ["Action"] = "Buy",
+                        ["Shop"] = "ExchangeShop",
+                        ["Item"] = selectedExchange,
+                        ["Event"] = "ItemShopAction"
+                    },
+                    [2] = "\n"
+                }
+            }
+            pcall(function()
+                remote:FireServer(unpack(args))
+            end)
+        end
+        task.wait(0.5)
+    end
+end)
 
 local teleportData = {
     {Name = "Solo lvl", Position = CFrame.new(577.968262, 27.9623756, 261.452271)},
