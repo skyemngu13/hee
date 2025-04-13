@@ -858,8 +858,18 @@ end)
     toggleButton.TextColor3 = Color3.fromRGB(255, 1, 43)
     toggleButton.TextXAlignment = Enum.TextXAlignment.Left
 
+    local optionContainer = Instance.new("Frame")
+    optionContainer.Parent = dropDownFrame
+    optionContainer.BackgroundTransparency = 1
+    optionContainer.Position = UDim2.new(0, 0, 0, 42)
+    optionContainer.Size = UDim2.new(1, 0, 0, #list * 35)
+    optionContainer.Visible = false
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 5)
+    layout.Parent = optionContainer
+
     local opened = false
-    local options = {}
 
     local function updateText()
         local result = {}
@@ -873,16 +883,13 @@ end)
 
     for _, option in ipairs(list) do
         local btn = Instance.new("TextButton")
-        btn.Parent = dropDownFrame
+        btn.Parent = optionContainer
         btn.Size = UDim2.new(1, -10, 0, 30)
-        btn.Position = UDim2.new(0, 5, 0, 0)
         btn.BackgroundColor3 = selected[option] and Color3.fromRGB(181, 1, 31) or Color3.fromRGB(40, 40, 40)
         btn.Text = option
         btn.TextColor3 = Color3.new(1, 1, 1)
         btn.Font = Enum.Font.GothamSemibold
         btn.TextSize = 13
-        btn.Visible = false
-        table.insert(options, btn)
 
         btn.MouseButton1Click:Connect(function()
             selected[option] = not selected[option]
@@ -899,11 +906,9 @@ end)
 
     toggleButton.MouseButton1Click:Connect(function()
         opened = not opened
-        for _, btn in pairs(options) do
-            btn.Visible = opened
-        end
+        optionContainer.Visible = opened
+        local height = opened and (42 + #list * 35) or 42
 
-        local height = opened and (42 + #options * 35) or 42
         game.TweenService:Create(dropDownFrame, TweenInfo.new(0.2), {
             Size = UDim2.new(0, 394, 0, height)
         }):Play()
