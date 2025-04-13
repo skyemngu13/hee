@@ -811,35 +811,24 @@ end
                                         mainCorner_3.Name = "mainCorner"
                                         mainCorner_3.Parent = optionBtn
 
-                                        optionBtn.MouseButton1Click:Connect(function()
-    callback(v)
-    dropdownItem.Text = dInfo .. ": " .. v
+                                        function ElementHandler:CreateMultiDropdown(options)
+    local dInfo = options.Name or "MultiDropdown"
+    local list = options.Options or {}
+    local defaultSelected = options.Default or {}
+    local callback = options.Callback or function() end
+    local flag = options.Flag
+    local save = options.Save ~= false
 
-    if options.Flag and options.Save then
-        settings[options.Flag] = v
-        saveSettings()
-    end
-
-    dropDownFrame:TweenSize(UDim2.new(0, 394, 0, 42), "In", "Quint", 0.10)
-    task.wait(0.10)
-    UpdateSize()
-
-    game.TweenService:Create(ImageButton, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Rotation = 0
-    }):Play()
-
-    isDropped = false
-end)
-        end
-        function ElementHandler:MultiDropdown(dInfo, list, defaultSelected, callback)
-    dInfo = dInfo or ""
-    list = list or {}
-    defaultSelected = defaultSelected or {}
-    callback = callback or function() end
-
+    -- Load selected từ settings nếu có
     local selected = {}
-    for _, item in ipairs(defaultSelected) do
-        selected[item] = true
+    if flag and save and settings[flag] then
+        for _, item in ipairs(settings[flag]) do
+            selected[item] = true
+        end
+    else
+        for _, item in ipairs(defaultSelected) do
+            selected[item] = true
+        end
     end
 
     local dropDownFrame = Instance.new("Frame")
@@ -899,6 +888,12 @@ end)
             for item, isSel in pairs(selected) do
                 if isSel then table.insert(result, item) end
             end
+
+            if flag and save then
+                settings[flag] = result
+                saveSettings()
+            end
+
             callback(result)
         end)
     end
