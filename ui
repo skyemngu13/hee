@@ -85,17 +85,23 @@ function RectUI:CreateWindow(config)
         end
     end)
 
-    main.InputEnded:Connect(function(input)
+    local dragParts = {main, topBar, tabContainer, content}
+
+for _, part in ipairs(dragParts) do
+    part.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            offset = input.Position - main.AbsolutePosition
+        end
+    end)
+
+    part.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
+end
 
-    UIS.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            main.Position = UDim2.new(0, input.Position.X - offset.X, 0, input.Position.Y - offset.Y)
-        end
-    end)
 
     -- Giao diện window trả ra
     local window = {}
