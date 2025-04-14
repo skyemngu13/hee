@@ -345,7 +345,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
 	Name = "🔽 Chọn Model để Arise",
-	Options = {"Jinwoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"}
+	Options = {"Jinwoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"},
 	CurrentOption = settings["AriseModels"] or {},
 	MultipleOptions = true, -- ✅ Bật multi-select
 	Flag = "AriseModels",
@@ -472,7 +472,7 @@ DungeonTab:CreateToggle({
     Callback = function(val)
         settings["AutoCheckDD"] = val
         saveSettings()
-    end
+        end
 })
 
 --  Hàm tạo Dungeon
@@ -566,7 +566,7 @@ local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 local lobbyPlaceId = 87039211657390
 
--- ⚙️ Toggle: Auto Castle Join
+-- Toggle: Auto Castle Join
 DungeonTab:CreateToggle({
     Name = "Auto Castle Join",
     CurrentValue = settings["AutoCastleCustom"],
@@ -576,7 +576,7 @@ DungeonTab:CreateToggle({
         saveSettings()
 
         if val then
-            -- 🔄 Gửi JoinCastle mỗi phút từ 45–58
+            -- Gửi JoinCastle mỗi phút từ 45–58
             task.spawn(function()
                 while settings["AutoCastleCustom"] do
                     local minute = os.date("*t").min
@@ -595,11 +595,11 @@ DungeonTab:CreateToggle({
                 end
             end)
 
-            -- 🏃‍♂️ Teleport về lobby khi đến đúng tầng
+            -- Teleport về lobby khi đến đúng tầng
             task.spawn(function()
                 while settings["AutoCastleCustom"] do
                     if not checkingCastle and targetFloor then
-                        local success, _ = pcall(function()
+                        pcall(function()
                             local roomText = LocalPlayer:WaitForChild("PlayerGui")
                                 :WaitForChild("Hud")
                                 :WaitForChild("UpContanier")
@@ -619,7 +619,7 @@ DungeonTab:CreateToggle({
     end
 })
 
--- 🧾 Textbox: Nhập tầng mục tiêu để teleport
+-- Textbox: Nhập tầng để teleport về
 local castleFloorInput = DungeonTab:CreateInput({
     Name = "Auto Out Floor",
     PlaceholderText = "31",
@@ -630,17 +630,16 @@ local castleFloorInput = DungeonTab:CreateInput({
         if num then
             settings["CastleTargetFloor"] = tostring(num)
             targetFloor = num
-            checkingCastle = false -- Cho phép kiểm lại
+            checkingCastle = false
             saveSettings()
         end
     end
 })
 
--- Cập nhật UI Input sau khi tạo
 task.wait(0.1)
 castleFloorInput:Set(settings["CastleTargetFloor"])
 
--- ⚙️ Toggle: Auto Out Khi giết boss
+-- Toggle: Auto Out Khi giết boss
 DungeonTab:CreateToggle({
     Name = "Auto Out Khi",
     CurrentValue = settings["AutoCastleBossOut"],
@@ -651,7 +650,7 @@ DungeonTab:CreateToggle({
     end
 })
 
--- 🧾 Input: Tầng có boss cần kill rồi out
+-- Input: Tầng có boss cần giết rồi out
 local bossOutInput = DungeonTab:CreateInput({
     Name = "Kill boss ở tầng",
     PlaceholderText = "30",
@@ -666,12 +665,11 @@ local bossOutInput = DungeonTab:CreateInput({
     end
 })
 
--- Đảm bảo input hiển thị đúng
 task.delay(0.1, function()
     bossOutInput:Set(tostring(settings["AutoCastleBossFloor"] or ""))
 end)
 
--- 🔁 Luồng kiểm tra boss chết để teleport
+-- Luồng kiểm tra boss chết để teleport
 task.spawn(function()
     local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
@@ -679,7 +677,8 @@ task.spawn(function()
         if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
             local roomText = ""
             pcall(function()
-                roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud"):WaitForChild("UpContanier"):WaitForChild("Room").Text
+                roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
+                    :WaitForChild("UpContanier"):WaitForChild("Room").Text
             end)
 
             local match = roomText:match("Floor: (%d+)/100")
@@ -688,24 +687,24 @@ task.spawn(function()
                 local bossFloor = tonumber(settings["AutoCastleBossFloor"])
 
                 if currentFloor == bossFloor then
-                    local shouldTeleport = false
+                    local totalBossParts = 0
+                    local deadBossParts = 0
 
                     for _, folder in ipairs(enemiesServer:GetChildren()) do
                         if folder:IsA("Folder") then
                             for _, part in ipairs(folder:GetChildren()) do
                                 if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
+                                    totalBossParts += 1
                                     local hp = part:GetAttribute("HP")
                                     if hp and hp <= 0 then
-                                        shouldTeleport = true
-                                        break
+                                        deadBossParts += 1
                                     end
                                 end
                             end
                         end
-                        if shouldTeleport then break end
                     end
 
-                    if shouldTeleport then
+                    if totalBossParts > 0 and deadBossParts == totalBossParts then
                         task.wait(2)
                         TeleportService:Teleport(lobbyPlaceId)
                     end
@@ -1215,7 +1214,6 @@ end)
 task.spawn(function()
     task.wait(1) -- Đảm bảo UI đã vẽ xong
 
-    -- Gọi lại callback bằng cách bật rồi tắt toggle
     -- Bật lại các toggle đã lưu trạng thái trong settings
 task.spawn(function()
     task.wait(1) -- Đợi UI vẽ xong
