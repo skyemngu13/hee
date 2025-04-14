@@ -673,12 +673,12 @@ task.delay(0.1, function()
 end)
 
 -- Luồng kiểm tra boss chết để teleport
--- ✅ Luồng kiểm tra boss chết để teleport (boss duy nhất - Scale >= 2)
 task.spawn(function()
     local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
     while true do
         if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
+            local currentFloor = 0
             local roomText = ""
             pcall(function()
                 roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
@@ -687,12 +687,15 @@ task.spawn(function()
 
             local match = roomText:match("Floor: (%d+)/100")
             if match then
-                local currentFloor = tonumber(match)
-                local bossFloor = tonumber(settings["AutoCastleBossFloor"])
+                currentFloor = tonumber(match)
+            end
 
-                if currentFloor == bossFloor then
+            local bossFloor = tonumber(settings["AutoCastleBossFloor"])
+
+            if currentFloor == bossFloor then
+                -- Quét liên tục cho đến khi boss chết
+                while currentFloor == bossFloor and settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] do
                     local bossDead = false
-
                     for _, folder in ipairs(enemiesServer:GetChildren()) do
                         if folder:IsA("Folder") then
                             for _, part in ipairs(folder:GetChildren()) do
@@ -711,7 +714,20 @@ task.spawn(function()
                     if bossDead then
                         task.wait(2)
                         TeleportService:Teleport(lobbyPlaceId)
+                        break
                     end
+
+                    -- Cập nhật tầng
+                    pcall(function()
+                        roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
+                            :WaitForChild("UpContanier"):WaitForChild("Room").Text
+                        local matchNew = roomText:match("Floor: (%d+)/100")
+                        if matchNew then
+                            currentFloor = tonumber(matchNew)
+                        end
+                    end)
+
+                    task.wait(1) -- tránh spam
                 end
             end
         end
