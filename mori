@@ -345,7 +345,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
 	Name = "🔽 Chọn Model để Arise",
-	Options = {"Jinwoo", "Pucci", "Denji", "Freeza"},
+	Options = {"Jinwoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"}
 	CurrentOption = settings["AriseModels"] or {},
 	MultipleOptions = true, -- ✅ Bật multi-select
 	Flag = "AriseModels",
@@ -447,7 +447,7 @@ task.spawn(function()
         if autoDestroy then
             pcall(handleMob)
         end
-        task.wait(0.1)
+        task.wait(0.2)
     end
 end)
 
