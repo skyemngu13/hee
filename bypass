@@ -97,7 +97,7 @@ local function createAndStartDungeon()
         }
     }
     bridge:FireServer(unpack(args2))
-    wait(1)
+    wait(0.5)
 
     local args3 = {
         [1] = {
@@ -114,7 +114,7 @@ local waitFor12s = false
 
 while true do
     if game.PlaceId == 87039211657390 then
-        wait(3)
+        wait(2)
         createAndStartDungeon()
     else
         local infoGui = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud"):FindFirstChild("UpContanier")
@@ -124,7 +124,6 @@ while true do
             local currentText = dungeonInfo.Text
 
             if DoubleDungeonEnabled then
-                -- Nếu thấy 13s → bắt đầu chờ 12s
                 if currentText == "Dungeon Ends in 13s" then
                     waitFor12s = true
                 elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
@@ -134,9 +133,9 @@ while true do
                     waitFor12s = false
                 end
             else
-                -- Nếu tắt → đợi Dungeon Ended rồi tạo lại
-                if currentText == "Dungeon Ended!" and lastText ~= currentText then
-                    task.delay(2, createAndStartDungeon)
+                -- Check các trạng thái đếm ngược (20s, 19s, ...)
+                if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
+                    createAndStartDungeon()
                 end
             end
 
