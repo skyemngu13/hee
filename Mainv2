@@ -125,7 +125,7 @@ task.delay(0.2, function()
 end)
 
 MainTab:CreateToggle({
-    Name = "Auto Send Pet Fast",
+    Name = "Auto Send Pet Fast (new)",
     CurrentValue = settings["AutoSendPetFast"],
     Flag = "AutoSendPetFast",
     Callback = function(val)
@@ -517,7 +517,7 @@ DungeonTab:CreateToggle({
 
 -- uto Check DD Toggle (ở dưới)
 DungeonTab:CreateToggle({
-    Name = "Auto Check DD",
+    Name = "Auto Check DD (fix)",
     CurrentValue = settings["AutoCheckDD"],
     Flag = "AutoCheckDD",
     Callback = function(val)
@@ -689,7 +689,7 @@ DungeonTab:CreateToggle({
 
 -- Textbox: Nhập tầng để teleport về
 local castleFloorInput = DungeonTab:CreateInput({
-    Name = "Auto Out Floor",
+    Name = "Auto Out Floor (fix)",
     PlaceholderText = "100",
     RemoveTextAfterFocusLost = false,
     Default = tostring(settings["CastleTargetFloor"]),
@@ -999,7 +999,7 @@ local isExchanging = false
 
 -- Dropdown ở ShopTab
 ShopTab:CreateDropdown({
-    Name = "Loại đổi Enchant",
+    Name = "Loại đổi Enchant (fix)",
     Options = {"10 rare = 1 legend", "1 legend = 1 rare", "10 common = 1 rare"},
     CurrentOption = "10 rare = 1 legend",
     Flag = "EnchantType",
