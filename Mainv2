@@ -376,6 +376,9 @@ end
 end)
 -- ⚙ Cài đặt mặc định
 
+local autoDestroy = settings["AutoDestroy"]
+local selectedModels = settings["AriseModels"]
+
 --  Danh sách tất cả model có thể chọn
 local allModels = {"Jinwoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"}  -- bạn có thể thêm tùy ý
 
@@ -458,37 +461,46 @@ task.spawn(function()
     end
 
     -- Xử lý Arise hoặc Destroy
-    -- Xử lý Arise hoặc Destroy
-local function handleMob()
-    local mobPart, mobModel = getNearestMob()
-    if not mobPart or not mobModel then return end
+    local function handleMob()
+        local mobPart, mobModel = getNearestMob()
+        if not mobPart or not mobModel then return end
 
-    local uuid = mobPart.Name
-    local modelName = mobPart:GetAttribute("Model")
+        local uuid = mobPart.Name
+        local modelName = mobPart:GetAttribute("Model")
+        local scale = mobPart:GetAttribute("Scale")
 
-    -- Mặc định là destroy
-    local eventType = "EnemyDestroy"
+        local ariseFilter = {}
+        for _, mdl in ipairs(settings["AriseModels"] or {}) do
+            ariseFilter[mdl] = 2.5 -- default scale
+        end
 
-    -- Nếu model nằm trong danh sách arise thì capture
-    if table.find(settings["AriseModels"] or {}, modelName) then
-        eventType = "EnemyCapture"
+        local eventType = "EnemyDestroy"
+        if ariseFilter[modelName] and scale == ariseFilter[modelName] then
+            eventType = "EnemyCapture"
+        end
+
+        for _ = 1, 4 do
+            local args = {
+                [1] = {
+                    [1] = {
+                        ["Event"] = eventType,
+                        ["Enemy"] = uuid
+                    },
+                    [2] = "\4"
+                }
+            }
+            remote:FireServer(unpack(args))
+            task.wait(0.2)
+        end
     end
 
-    -- Gửi sự kiện 4 lần để chắc chắn
-    for _ = 1, 4 do
-        local args = {
-            [1] = {
-                [1] = {
-                    ["Event"] = eventType,
-                    ["Enemy"] = uuid
-                },
-                [2] = "\4"
-            }
-        }
-        remote:FireServer(unpack(args))
+    while true do
+        if autoDestroy then
+            pcall(handleMob)
+        end
         task.wait(0.2)
     end
-end
+end)
 
 DungeonTab:CreateLabel("Auto farm Dungeon")
 
