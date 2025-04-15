@@ -773,7 +773,7 @@ task.spawn(function()
                     end
 
                     if not hasAliveBoss then
-                        task.wait(1)
+                        task.wait(2)
                         TeleportService:Teleport(lobbyPlaceId)
                         break
                     end
