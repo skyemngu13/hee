@@ -510,6 +510,8 @@ end
 task.spawn(function()
     local lastText = ""
     local waitFor12s = false
+    local isDoubleDungeonCheck = false
+    local hasDoubleDungeonHappened = false
 
     while true do
         if not settings["AutoBypassDungeon"] and not settings["AutoCheckDD"] then
@@ -528,13 +530,21 @@ task.spawn(function()
                 if dungeonInfo then
                     local currentText = dungeonInfo.Text
 
-                    -- Auto Check DD logic
-                    if settings["AutoCheckDD"] then
+                    -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
+                    if currentText == "Dungeon Ends in 20s" then
+                        isDoubleDungeonCheck = true
+                        waitFor12s = false
+                    end
+
+                    -- 🧠 Auto Check DD logic
+                    if settings["AutoCheckDD"] and isDoubleDungeonCheck then
                         if currentText == "Dungeon Ends in 13s" then
                             waitFor12s = true
                         elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
                             createAndStartDungeon()
                             waitFor12s = false
+                            isDoubleDungeonCheck = false
+                            hasDoubleDungeonHappened = true -- đã có double dungeon
                         elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
                             waitFor12s = false
                         end
@@ -542,8 +552,14 @@ task.spawn(function()
 
                     -- 🛡️ Auto Bypass Dungeon logic
                     if settings["AutoBypassDungeon"] then
-                        if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
-                            createAndStartDungeon()
+                        -- Chỉ tạo lại nếu:
+                        -- 1. Không bật AutoCheckDD
+                        -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
+                        if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
+                            if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
+                                createAndStartDungeon()
+                                hasDoubleDungeonHappened = false
+                            end
                         end
                     end
 
