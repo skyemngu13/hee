@@ -84,8 +84,6 @@ local defaultSettings = {
     BypassCooldown = false,
     SpecialScript = false,
     AutoHideUI = false,
-    EnchantType = "10 rare = 1 legend",
-    AutoExchangeEncant = false
 }
 
 for key, value in pairs(defaultSettings) do
@@ -1171,8 +1169,6 @@ task.spawn(function()
         "AutoCheckDD",
         "AutoCastleBossOut",
         "AutoCastleBossFloor",
-        "EnchantType",
-        "AutoExchangeEnchant"
     }
 
     for _, flag in ipairs(allFlags) do
