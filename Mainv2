@@ -462,37 +462,31 @@ task.spawn(function()
 
     -- Xử lý Arise hoặc Destroy
     local function handleMob()
-        local mobPart, mobModel = getNearestMob()
-        if not mobPart or not mobModel then return end
+    local mobPart, mobModel = getNearestMob()
+    if not mobPart or not mobModel then return end
 
-        local uuid = mobPart.Name
-        local modelName = mobPart:GetAttribute("Model")
-        local scale = mobPart:GetAttribute("Scale")
+    local uuid = mobPart.Name
+    local modelName = mobPart:GetAttribute("Model")
 
-        local ariseFilter = {}
-        for _, mdl in ipairs(settings["AriseModels"] or {}) do
-            ariseFilter[mdl] = 2.5 -- default scale
-        end
-
-        local eventType = "EnemyDestroy"
-        if ariseFilter[modelName] and scale == ariseFilter[modelName] then
-            eventType = "EnemyCapture"
-        end
-
-        for _ = 1, 4 do
-            local args = {
-                [1] = {
-                    [1] = {
-                        ["Event"] = eventType,
-                        ["Enemy"] = uuid
-                    },
-                    [2] = "\4"
-                }
-            }
-            remote:FireServer(unpack(args))
-            task.wait(0.2)
-        end
+    local eventType = "EnemyDestroy"
+    if table.find(settings["AriseModels"] or {}, modelName) then
+        eventType = "EnemyCapture"
     end
+
+    for _ = 1, 4 do
+        local args = {
+            [1] = {
+                [1] = {
+                    ["Event"] = eventType,
+                    ["Enemy"] = uuid
+                },
+                [2] = "\4"
+            }
+        }
+        remote:FireServer(unpack(args))
+        task.wait(0.2)
+    end
+end
 
     while true do
         if autoDestroy then
