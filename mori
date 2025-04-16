@@ -351,9 +351,8 @@ local function teleportNearMob(pos)
     -- 🛡️ Teleport Safe logic (luôn đọc realtime từ settings)
     if settings["TeleportSafe"] then
         teleportCounter += 1
-        if teleportCounter >= 5 then
-            print("[TELEPORT SAFE] Delay triggered after 5 teleports")
-            task.wait(2)
+        if teleportCounter >= 3 then
+            task.wait(0.7)
             teleportCounter = 0
         end
     end
