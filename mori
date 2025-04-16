@@ -333,24 +333,27 @@ end
 
     local teleportCounter = 0
 
-    local function teleportNearMob(pos)
-        if typeof(pos) ~= "Vector3" then return end
-        local dirVector = (rootPart.Position - pos)
-        if dirVector.Magnitude == 0 then return end
+    local teleportCounter = 0
 
-        local success, direction = pcall(function()
-            return dirVector.Unit
-        end)
-        if not success then return end
+local function teleportNearMob(pos)
+    if typeof(pos) ~= "Vector3" then return end
+    local dirVector = (rootPart.Position - pos)
+    if dirVector.Magnitude == 0 then return end
 
-        local offset = direction * 5 + Vector3.new(0, 3, 0)
-        rootPart.CFrame = CFrame.new(pos + offset, pos)
+    local success, direction = pcall(function()
+        return dirVector.Unit
+    end)
+    if not success then return end
 
-       -- 🛡️ Teleport Safe logic
+    local offset = direction * 5 + Vector3.new(0, 3, 0)
+    rootPart.CFrame = CFrame.new(pos + offset, pos)
+
+    -- 🛡️ Teleport Safe logic (luôn đọc realtime từ settings)
     if settings["TeleportSafe"] then
         teleportCounter += 1
         if teleportCounter >= 5 then
-            task.wait(2) -- tránh bị đá
+            print("[TELEPORT SAFE] Delay triggered after 5 teleports")
+            task.wait(2)
             teleportCounter = 0
         end
     end
