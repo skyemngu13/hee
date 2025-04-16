@@ -396,7 +396,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
 	Name = " Chọn Model để Arise",
-	Options = {"Jinwoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"},
+	Options = {"JinWoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"},
 	CurrentOption = settings["AriseModels"] or {},
 	MultipleOptions = true, -- Bật multi-select
 	Flag = "AriseModels",
