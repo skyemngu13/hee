@@ -499,7 +499,7 @@ end)
 DungeonTab:CreateLabel("Auto farm Dungeon")
 
 DungeonTab:CreateToggle({ 
-    Name = "Auto Bypass Dungeon",
+    Name = "Auto Bypass Dungeon.",
     CurrentValue = settings["AutoBypassDungeon"],
     Flag = "AutoBypassDungeon",
     Callback = function(val)
