@@ -83,8 +83,10 @@ local defaultSettings = {
     SpecialScript = false,
     AutoHideUI = false,
     AutoSendPetFast = false,
-    SelectedCheckpoint = "25"
+    SelectedCheckpoint = "25",
     BossOutFloor = 0,
+    AutoAddRune = false,
+    SelectedRuneName = "Black Clover",
 }
 
 for key, value in pairs(defaultSettings) do
