@@ -85,6 +85,7 @@ local defaultSettings = {
     SpecialScript = false,
     AutoHideUI = false,
     AutoSendPetFast = false,
+    AutoCastleCheckpoint = false,
 }
 
 for key, value in pairs(defaultSettings) do
