@@ -83,7 +83,7 @@ local defaultSettings = {
     SpecialScript = false,
     AutoHideUI = false,
     AutoSendPetFast = false,
-    SelectedCheckpoint = "25",
+    SelectedCheckpoint = "25"
     BossOutFloor = 0,
 }
 
@@ -798,10 +798,14 @@ end)
 
 -- 🔽 Dropdown chọn tầng checkpoint
 local teleportFloors = {"25", "50", "75", "100"}
+
 DungeonTab:CreateDropdown({
     Name = "Teleport Floor",
     Options = teleportFloors,
-    CurrentOption = {settings["SelectedCheckpoint"] or "25"},
+    CurrentOption = {
+        table.find(teleportFloors, settings["SelectedCheckpoint"]) and settings["SelectedCheckpoint"]
+        or "25"
+    },
     MultipleOptions = false,
     Flag = "SelectedCheckpoint",
     Callback = function(option)
