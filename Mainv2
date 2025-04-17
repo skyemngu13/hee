@@ -498,8 +498,9 @@ end)
 
 DungeonTab:CreateLabel("Auto farm Dungeon")
 
-DungeonTab:CreateToggle({ 
-    Name = "Auto Bypass Dungeon.",
+-- 🛡Auto Bypass Dungeon Toggle 
+DungeonTab:CreateToggle({
+    Name = "Auto Bypass Dungeon",
     CurrentValue = settings["AutoBypassDungeon"],
     Flag = "AutoBypassDungeon",
     Callback = function(val)
@@ -508,7 +509,7 @@ DungeonTab:CreateToggle({
     end
 })
 
--- Auto Check DD Toggle
+-- uto Check DD Toggle (ở dưới)
 DungeonTab:CreateToggle({
     Name = "Auto Check DD (fix)",
     CurrentValue = settings["AutoCheckDD"],
@@ -516,23 +517,41 @@ DungeonTab:CreateToggle({
     Callback = function(val)
         settings["AutoCheckDD"] = val
         saveSettings()
-    end
+        end
 })
 
+--  Hàm tạo Dungeon
 local function createAndStartDungeon()
     local bridge = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
-    bridge:FireServer({{ {Type = "Gems", Event = "DungeonAction", Action = "BuyTicket"}, "\n" }})
+    local args1 = {
+        [1] = {
+            [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args1))
     wait(1)
 
-    bridge:FireServer({{ {Event = "DungeonAction", Action = "Create"}, "\n" }})
+    local args2 = {
+        [1] = {
+            [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args2))
     wait(1)
 
-    bridge:FireServer({{ {Dungeon = 876403839, Event = "DungeonAction", Action = "Start"}, "\n" }})
+    local args3 = {
+        [1] = {
+            [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args3))
 end
 
--- Main logic
-
+--  Luồng xử lý Auto Dungeon (cho cả hai toggle)
 task.spawn(function()
     local lastText = ""
     local waitFor12s = false
@@ -557,41 +576,38 @@ task.spawn(function()
                     local textLabel = dungeonInfo:FindFirstChild("TextLabel")
                     local currentText = textLabel and textLabel.Text or ""
 
-                    -- ✅ Sửa logic đúng như yêu cầu
-                    if currentText:find("^Dungeon Ends in %d+s$") then
-                        -- 📌 Kiểm tra Double Dungeon
-                        if settings["AutoCheckDD"] then
-                            if currentText == "Dungeon Ends in 20s" then
-                                isDoubleDungeonCheck = true
-                                waitFor12s = false
-                            end
-
-                            if isDoubleDungeonCheck then
-                                if currentText == "Dungeon Ends in 13s" then
-                                    waitFor12s = true
-                                elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
-                                    createAndStartDungeon()
-                                    waitFor12s = false
-                                    isDoubleDungeonCheck = false
-                                    hasDoubleDungeonHappened = true
-                                elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
-                                    waitFor12s = false
-                                end
-                            end
-                        end
-
-                        -- 🛡️ Auto Bypass Dungeon
-                        if settings["AutoBypassDungeon"] then
-                            if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
-                                if currentText ~= lastText then
-                                    createAndStartDungeon()
-                                    hasDoubleDungeonHappened = false
-                                end
-                            end
-                        end
-
-                        lastText = currentText
+                    -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
+                    if currentText == "Dungeon Ends in 20s" then
+                        isDoubleDungeonCheck = true
+                        waitFor12s = false
                     end
+
+                    -- 🧠 Auto Check DD logic
+                    if settings["AutoCheckDD"] and isDoubleDungeonCheck then
+                        if currentText == "Dungeon Ends in 13s" then
+                            waitFor12s = true
+                        elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
+                            createAndStartDungeon()
+                            waitFor12s = false
+                            isDoubleDungeonCheck = false
+                            hasDoubleDungeonHappened = true -- đã có double dungeon
+                        elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
+                            waitFor12s = false
+                        end
+                    end
+
+                    -- 🛡️ Auto Bypass Dungeon logic
+                    if settings["AutoBypassDungeon"] then
+                        -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
+                        if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
+                            if currentText:match("^Dungeon Ends in %\d+s$") and currentText ~= lastText then
+                                createAndStartDungeon()
+                                hasDoubleDungeonHappened = false
+                            end
+                        end
+                    end
+
+                    lastText = currentText
                 end
             end
 
