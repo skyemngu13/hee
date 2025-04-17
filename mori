@@ -1,4 +1,3 @@
-local wait = task and task.wait or wait
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer and workspace:FindFirstChild("__Extra") and workspace:FindFirstChild("__Main")
 
 local CoreGui = game:GetService("CoreGui")
