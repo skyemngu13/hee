@@ -735,17 +735,17 @@ local teleportDropdown = DungeonTab:CreateDropdown({
 -- 🔁 Tự động teleport tới model checkpoint đã chọn khi nó xuất hiện trong __World
 task.spawn(function()
 	while true do
-		if settings["AutoCastleCheckpoint"] and settings["TeleportCheckpoint"] then
-			local selected = settings["TeleportCheckpoint"]
-			local worldFolder = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
-			if worldFolder then
-				local checkpointModel = worldFolder:FindFirstChild(selected)
-				if checkpointModel and checkpointModel:IsA("Model") and checkpointModel.PrimaryPart then
-					task.wait(0.5)
+		-- Chỉ chạy khi AutoCastleCheckpoint được bật và đã có lựa chọn trong dropdown
+		local selectedModel = settings["TeleportCheckpoint"]
+		if settings["AutoCastleCheckpoint"] and selectedModel then
+			local world = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
+			if world then
+				local targetModel = world:FindFirstChild(selectedModel)
+				if targetModel and targetModel:IsA("Model") and targetModel.PrimaryPart then
 					pcall(function()
 						local root = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 						if root then
-							root.CFrame = checkpointModel:GetPrimaryPartCFrame() + Vector3.new(0, 5, 0)
+							root.CFrame = targetModel:GetPrimaryPartCFrame() + Vector3.new(0, 5, 0)
 						end
 					end)
 					task.wait(5)
