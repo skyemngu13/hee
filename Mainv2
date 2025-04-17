@@ -573,7 +573,8 @@ task.spawn(function()
                 local dungeonInfo = infoGui and infoGui:FindFirstChild("DungeonInfo")
 
                 if dungeonInfo then
-                    local currentText = dungeonInfo.Text
+                    local textLabel = dungeonInfo:FindFirstChild("TextLabel")
+                    local currentText = textLabel and textLabel.Text or ""
 
                     -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
                     if currentText == "Dungeon Ends in 20s" then
@@ -597,11 +598,9 @@ task.spawn(function()
 
                     -- 🛡️ Auto Bypass Dungeon logic
                     if settings["AutoBypassDungeon"] then
-                        -- Chỉ tạo lại nếu:
-                        -- 1. Không bật AutoCheckDD
                         -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
                         if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
-                            if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
+                            if currentText:match("^Dungeon Ends in %\d+s$") and currentText ~= lastText then
                                 createAndStartDungeon()
                                 hasDoubleDungeonHappened = false
                             end
