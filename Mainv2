@@ -86,6 +86,7 @@ local defaultSettings = {
     AutoHideUI = false,
     AutoSendPetFast = false,
     AutoCastleCheckpoint = false,
+    SelectedCheckpoint = "Room_25",
 }
 
 for key, value in pairs(defaultSettings) do
@@ -713,6 +714,47 @@ task.spawn(function()
         end
         task.wait(2)
     end
+end)
+
+-- 📌 Lưu checkpoint dropdown
+local selectedCheckpoint = settings["SelectedCheckpoint"] or "Room_25"
+
+-- 📦 Dropdown chọn model tầng để teleport
+local teleportDropdown = DungeonTab:CreateDropdown({
+	Name = "Teleport Floor",
+	Options = { "Room_25", "Room_50", "Room_75", "Room_100" },
+	CurrentOption = selectedCheckpoint,
+	Flag = "TeleportCheckpoint",
+	Callback = function(option)
+		selectedCheckpoint = option
+		settings["SelectedCheckpoint"] = option
+		saveSettings()
+	end
+})
+
+-- 🔁 Tự động teleport tới model checkpoint đã chọn khi nó xuất hiện trong __World
+task.spawn(function()
+	while true do
+		-- ✅ Chỉ khi bật AutoCastleCheckpoint thì mới chạy
+		if settings["AutoCastleCheckpoint"] and selectedCheckpoint then
+			local worldFolder = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
+			if worldFolder then
+				local checkpointModel = worldFolder:FindFirstChild(selectedCheckpoint)
+				if checkpointModel and checkpointModel:IsA("Model") and checkpointModel.PrimaryPart then
+					task.wait(0.5)
+					pcall(function()
+						local root = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+						if root then
+							root.CFrame = checkpointModel:GetPrimaryPartCFrame() + Vector3.new(0, 5, 0)
+						end
+					end)
+					-- Đợi 5s trước khi thử lại
+					task.wait(5)
+				end
+			end
+		end
+		task.wait(1)
+	end
 end)
 
 -- Textbox: Nhập tầng để teleport về
