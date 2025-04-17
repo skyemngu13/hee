@@ -731,30 +731,69 @@ local teleportDropdown = DungeonTab:CreateDropdown({
 	end
 })
 
--- 🔁 Tự động teleport tới model checkpoint đã chọn khi nó xuất hiện trong __World
+-- 🔁 Teleport tới checkpoint 1 lần khi model và part xuất hiện
 task.spawn(function()
+	local teleported = false
+
 	while true do
-		local selectedModel = settings["SelectedCheckpoint"]
-		if settings["AutoCastleCheckpoint"] and selectedModel then
+		if settings["AutoCastleCheckpoint"] and not teleported then
 			local world = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
-			if world then
-				local targetModel = world:FindFirstChild(selectedModel)
-				if targetModel and targetModel:IsA("Model") and targetModel.PrimaryPart then
-					pcall(function()
-						local root = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-						if root then
-							root.CFrame = targetModel:GetPrimaryPartCFrame() + Vector3.new(0, 5, 0)
+			local selectedModelName = settings["SelectedCheckpoint"]
+
+			if world and selectedModelName then
+				local model = world:FindFirstChild(selectedModelName)
+
+				if model then
+					local spawnPart = model:FindFirstChild("PlayersSpawns")
+
+					-- Nếu part chưa xuất hiện thì chờ
+					if not spawnPart then
+						local connection
+						connection = model.ChildAdded:Connect(function(child)
+							if child.Name == "PlayersSpawns" and child:IsA("BasePart") then
+								spawnPart = child
+								if connection then connection:Disconnect() end
+							end
+						end)
+
+						local waitTime = 0
+						while not spawnPart and waitTime < 10 do
+							task.wait(1)
+							waitTime += 1
 						end
-					end)
-					task.wait(5)
+
+						if connection then connection:Disconnect() end
+					end
+
+					-- Nếu tìm thấy part thì teleport
+					if spawnPart then
+						pcall(function()
+							local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+							local root = char:WaitForChild("HumanoidRootPart", 5)
+							if root then
+								root.CFrame = spawnPart.CFrame + Vector3.new(0, 5, 0)
+								teleported = true
+								print("✅ Teleported to", selectedModelName)
+							end
+						end)
+					else
+						warn("❌ Không tìm thấy 'PlayersSpawns' trong model", selectedModelName)
+					end
 				end
 			end
 		end
+
+		-- Reset khi tắt toggle
+		if not settings["AutoCastleCheckpoint"] then
+			teleported = false
+		end
+
 		task.wait(1)
 	end
 end)
 
 -- Textbox: Nhập tầng để teleport về
+-- 📥 Input: Tầng để teleport về lobby khi tới tầng đó
 local castleFloorInput = DungeonTab:CreateInput({
     Name = "Auto Out Floor (fix)",
     PlaceholderText = "100",
@@ -765,7 +804,6 @@ local castleFloorInput = DungeonTab:CreateInput({
         if num then
             settings["CastleTargetFloor"] = tostring(num)
             targetFloor = num
-            checkingCastle = false
             saveSettings()
         end
     end
@@ -774,7 +812,50 @@ local castleFloorInput = DungeonTab:CreateInput({
 task.wait(0.1)
 castleFloorInput:Set(settings["CastleTargetFloor"])
 
--- Toggle: Auto Out Khi giết boss
+-- 🔁 Luồng tự động out khi tới tầng CastleTargetFloor
+task.spawn(function()
+    local teleported = false
+    local world = workspace:WaitForChild("__Main"):WaitForChild("__World")
+
+    while true do
+        if settings["AutoCastleCustom"] and tonumber(settings["CastleTargetFloor"]) and not teleported then
+            local roomName = "Room_" .. tostring(settings["CastleTargetFloor"])
+            local targetModel = world:FindFirstChild(roomName)
+
+            if not targetModel then
+                local found = false
+                local connection
+                connection = world.ChildAdded:Connect(function(child)
+                    if child.Name == roomName and child:IsA("Model") then
+                        found = true
+                        targetModel = child
+                        connection:Disconnect()
+                    end
+                end)
+
+                local startTime = os.clock()
+                while not found and os.clock() - startTime < 30 do
+                    task.wait(1)
+                end
+                if connection then connection:Disconnect() end
+            end
+
+            if targetModel then
+                task.wait(2)
+                TeleportService:Teleport(lobbyPlaceId)
+                teleported = true
+            end
+        end
+
+        -- Reset lại nếu toggle tắt đi để cho phép teleport lần sau
+        if not settings["AutoCastleCustom"] then
+            teleported = false
+        end
+
+        task.wait(1)
+    end
+end)
+
 -- 🛑 Toggle: Auto Out Khi giết boss
 DungeonTab:CreateToggle({
     Name = "Auto Out Khi",
@@ -807,89 +888,86 @@ end)
 
 -- 🧠 Boss die ở model tầng: Room_XX
 task.spawn(function()
-	local world = workspace:WaitForChild("__Main"):WaitForChild("__World")
-	local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+    local world = workspace:WaitForChild("__Main"):WaitForChild("__World")
+    local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
-	while true do
-		if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
-			local bossFloor = tostring(settings["AutoCastleBossFloor"])
-			local roomModelName = "Room_" .. bossFloor
+    while true do
+        if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
+            local bossFloor = tostring(settings["AutoCastleBossFloor"])
+            local roomModelName = "Room_" .. bossFloor
 
-			-- 📦 Đợi Room_XX xuất hiện
-			local targetModel = world:FindFirstChild(roomModelName)
-			if not targetModel then
-				local found = false
-				local connection
-				connection = world.ChildAdded:Connect(function(child)
-					if child.Name == roomModelName and child:IsA("Model") and child.PrimaryPart then
-						found = true
-						connection:Disconnect()
-						targetModel = child
-					end
-				end)
+            -- 📦 Đợi Room_XX xuất hiện
+            local targetModel = world:FindFirstChild(roomModelName)
+            if not targetModel then
+                local found = false
+                local connection
+                connection = world.ChildAdded:Connect(function(child)
+                    if child.Name == roomModelName and child:IsA("Model") and child.PrimaryPart then
+                        found = true
+                        targetModel = child
+                        connection:Disconnect()
+                    end
+                end)
 
-				local startTime = os.clock()
-				while not found and os.clock() - startTime < 30 do
-					task.wait(1)
-				end
-				if not targetModel then
-					if connection then connection:Disconnect() end
-					task.wait(2)
-					continue
-				end
-			end
+                local startTime = os.clock()
+                while not found and os.clock() - startTime < 30 do
+                    task.wait(1)
+                end
+                if connection then connection:Disconnect() end
+                if not targetModel then continue end
+            end
 
-			-- 👁️ Đợi boss spawn – timeout
-			local bossSpawned = false
-			local startTime = os.clock()
-			while not bossSpawned and os.clock() - startTime < 30 do
-				for _, folder in ipairs(enemiesServer:GetChildren()) do
-					if folder:IsA("Folder") then
-						for _, part in ipairs(folder:GetChildren()) do
-							if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
-								bossSpawned = true
-								break
-							end
-						end
-					end
-					if bossSpawned then break end
-				end
-				task.wait(1)
-			end
+            -- 👁️ Đợi boss spawn – timeout
+            local bossSpawned = false
+            local startTime = os.clock()
+            while not bossSpawned and os.clock() - startTime < 30 do
+                for _, folder in ipairs(enemiesServer:GetChildren()) do
+                    if folder:IsA("Folder") then
+                        for _, part in ipairs(folder:GetChildren()) do
+                            if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
+                                bossSpawned = true
+                                break
+                            end
+                        end
+                    end
+                    if bossSpawned then break end
+                end
+                task.wait(1)
+            end
 
-			if not bossSpawned then
-				task.wait(2)
-				continue
-			end
+            if not bossSpawned then
+                task.wait(2)
+                continue
+            end
 
-			-- ✅ Kiểm tra boss chết
-			while true do
-				local allDead = true
-				for _, folder in ipairs(enemiesServer:GetChildren()) do
-					if folder:IsA("Folder") then
-						for _, part in ipairs(folder:GetChildren()) do
-							if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
-								if (part:GetAttribute("HP") or 0) > 0 then
-									allDead = false
-									break
-								end
-							end
-						end
-					end
-					if not allDead then break end
-				end
+            -- ✅ Kiểm tra boss chết
+            while true do
+                local allDead = true
+                for _, folder in ipairs(enemiesServer:GetChildren()) do
+                    if folder:IsA("Folder") then
+                        for _, part in ipairs(folder:GetChildren()) do
+                            if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
+                                if (part:GetAttribute("HP") or 0) > 0 then
+                                    allDead = false
+                                    break
+                                end
+                            end
+                        end
+                    end
+                    if not allDead then break end
+                end
 
-				if allDead then
-					task.wait(2)
-					TeleportService:Teleport(lobbyPlaceId)
-					break
-				end
+                if allDead then
+                    task.wait(2)
+                    TeleportService:Teleport(lobbyPlaceId)
+                    break
+                end
 
-				task.wait(1)
-			end
-		end
-		task.wait(2)
-	end
+                task.wait(1)
+            end
+        end
+        task.wait(2)
+    end
 end)
 
 local autoClicking = false
