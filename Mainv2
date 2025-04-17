@@ -741,7 +741,7 @@ task.spawn(function()
 end)
 
 -- 📥 Input: tầng để teleport về
-DungeonTab:CreateInput({
+local castleFloorInput = DungeonTab:CreateInput({
 	Name = "Auto Out Floor (fix)",
 	PlaceholderText = "100",
 	RemoveTextAfterFocusLost = false,
@@ -756,6 +756,12 @@ DungeonTab:CreateInput({
 		end
 	end
 })
+
+task.defer(function()
+	if castleFloorInput and settings["CastleTargetFloor"] then
+		castleFloorInput:Set(tostring(settings["CastleTargetFloor"]))
+	end
+end)
 
 -- 🛑 Toggle: Auto Out Khi giết boss
 DungeonTab:CreateToggle({
