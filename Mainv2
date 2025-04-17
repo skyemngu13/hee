@@ -485,7 +485,7 @@ task.spawn(function()
             }
         }
         remote:FireServer(unpack(args))
-        task.wait(0.01)
+        task.wait(0.1)
     end
 end
 
