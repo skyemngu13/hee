@@ -380,7 +380,7 @@ local autoDestroy = settings["AutoDestroy"]
 local selectedModels = settings["AriseModels"]
 
 --  Danh sách tất cả model có thể chọn
-local allModels = {"JinWoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"}  -- bạn có thể thêm tùy ý
+local allModels = {"JinWoo", "Pucci", "Metus", "Freeza", "Esil", "Baran", "Vulcan"}  -- bạn có thể thêm tùy ý
 
 -- 🗡 Toggle: Auto Destroy
 MainTab:CreateToggle({
@@ -396,7 +396,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
 	Name = " Chọn Model để Arise",
-	Options = {"JinWoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"},
+	Options = {"JinWoo", "Pucci", "Metus", "Freeza", "Esil", "Baran", "Vulcan"},
 	CurrentOption = settings["AriseModels"] or {},
 	MultipleOptions = true, -- Bật multi-select
 	Flag = "AriseModels",
