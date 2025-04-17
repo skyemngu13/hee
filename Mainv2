@@ -693,27 +693,26 @@ task.spawn(function()
     end
 end)
 
--- Teleport về lobby khi đến đúng tầng
+-- Teleport về lobby khi model Room_xx xuất hiện trong World (dựa theo tầng đã nhập)
 task.spawn(function()
-    while true do
-        if settings["AutoCastleCustom"] then
-            if not checkingCastle and targetFloor then
-                pcall(function()
-                    local roomText = LocalPlayer:WaitForChild("PlayerGui")
-                        :WaitForChild("Hud")
-                        :WaitForChild("UpContanier")
-                        :WaitForChild("Room").Text
+	while true do
+		if settings["AutoCastleCustom"] and tonumber(settings["CastleTargetFloor"]) then
+			local roomName = "Room_" .. tostring(settings["CastleTargetFloor"])
+			local world = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
 
-                    if typeof(roomText) == "string" and roomText:find("Floor: " .. targetFloor .. "/100") then
-                        checkingCastle = true
-                        task.wait(1)
-                        TeleportService:Teleport(lobbyPlaceId)
-                    end
-                end)
-            end
-        end
-        task.wait(2)
-    end
+			if world then
+				local model = world:FindFirstChild(roomName)
+				if model and model:IsA("Model") and model.PrimaryPart then
+					if not checkingCastle then
+						checkingCastle = true
+						task.wait(2)
+						TeleportService:Teleport(lobbyPlaceId)
+					end
+				end
+			end
+		end
+		task.wait(1)
+	end
 end)
 
 -- 📌 Lưu checkpoint dropdown
@@ -776,6 +775,7 @@ task.wait(0.1)
 castleFloorInput:Set(settings["CastleTargetFloor"])
 
 -- Toggle: Auto Out Khi giết boss
+-- 🛑 Toggle: Auto Out Khi giết boss
 DungeonTab:CreateToggle({
     Name = "Auto Out Khi",
     CurrentValue = settings["AutoCastleBossOut"],
@@ -786,7 +786,7 @@ DungeonTab:CreateToggle({
     end
 })
 
--- Input: Tầng có boss cần giết rồi out
+-- 📥 Input: Tầng có boss cần giết rồi out
 local bossOutInput = DungeonTab:CreateInput({
     Name = "Kill boss ở tầng",
     PlaceholderText = "100",
@@ -805,69 +805,91 @@ task.delay(0.1, function()
     bossOutInput:Set(tostring(settings["AutoCastleBossFloor"] or ""))
 end)
 
--- Luồng kiểm tra boss chết để teleport
+-- 🧠 Boss die ở model tầng: Room_XX
 task.spawn(function()
-    local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+	local world = workspace:WaitForChild("__Main"):WaitForChild("__World")
+	local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 
-    while true do
-        if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
-            local currentFloor = 0
-            local roomText = ""
-            pcall(function()
-                roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
-                    :WaitForChild("UpContanier"):WaitForChild("Room").Text
-            end)
+	while true do
+		if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
+			local bossFloor = tostring(settings["AutoCastleBossFloor"])
+			local roomModelName = "Room_" .. bossFloor
 
-            local match = roomText:match("Floor: (%d+)/100")
-            if match then
-                currentFloor = tonumber(match)
-            end
+			-- 📦 Đợi Room_XX xuất hiện
+			local targetModel = world:FindFirstChild(roomModelName)
+			if not targetModel then
+				local found = false
+				local connection
+				connection = world.ChildAdded:Connect(function(child)
+					if child.Name == roomModelName and child:IsA("Model") and child.PrimaryPart then
+						found = true
+						connection:Disconnect()
+						targetModel = child
+					end
+				end)
 
-            local bossFloor = tonumber(settings["AutoCastleBossFloor"])
+				local startTime = os.clock()
+				while not found and os.clock() - startTime < 30 do
+					task.wait(1)
+				end
+				if not targetModel then
+					if connection then connection:Disconnect() end
+					task.wait(2)
+					continue
+				end
+			end
 
-            if currentFloor == bossFloor then
-                while currentFloor == bossFloor and settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] do
-                    local trackedBossParts = {}
-                    for _, folder in ipairs(enemiesServer:GetChildren()) do
-                        if folder:IsA("Folder") then
-                            for _, part in ipairs(folder:GetChildren()) do
-                                if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
-                                    table.insert(trackedBossParts, part)
-                                end
-                            end
-                        end
-                    end
+			-- 👁️ Đợi boss spawn – timeout
+			local bossSpawned = false
+			local startTime = os.clock()
+			while not bossSpawned and os.clock() - startTime < 30 do
+				for _, folder in ipairs(enemiesServer:GetChildren()) do
+					if folder:IsA("Folder") then
+						for _, part in ipairs(folder:GetChildren()) do
+							if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
+								bossSpawned = true
+								break
+							end
+						end
+					end
+					if bossSpawned then break end
+				end
+				task.wait(1)
+			end
 
-                    local allDead = true
-                    for _, part in ipairs(trackedBossParts) do
-                        local hp = part:GetAttribute("HP")
-                        if hp and hp > 0 then
-                            allDead = false
-                            break
-                        end
-                    end
+			if not bossSpawned then
+				task.wait(2)
+				continue
+			end
 
-                    if allDead then
-                        task.wait(2)
-                        TeleportService:Teleport(lobbyPlaceId)
-                        break
-                    end
+			-- ✅ Kiểm tra boss chết
+			while true do
+				local allDead = true
+				for _, folder in ipairs(enemiesServer:GetChildren()) do
+					if folder:IsA("Folder") then
+						for _, part in ipairs(folder:GetChildren()) do
+							if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
+								if (part:GetAttribute("HP") or 0) > 0 then
+									allDead = false
+									break
+								end
+							end
+						end
+					end
+					if not allDead then break end
+				end
 
-                    pcall(function()
-                        roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
-                            :WaitForChild("UpContanier"):WaitForChild("Room").Text
-                        local matchNew = roomText:match("Floor: (%d+)/100")
-                        if matchNew then
-                            currentFloor = tonumber(matchNew)
-                        end
-                    end)
+				if allDead then
+					task.wait(2)
+					TeleportService:Teleport(lobbyPlaceId)
+					break
+				end
 
-                    task.wait(1)
-                end
-            end
-        end
-        task.wait(1.5)
-    end
+				task.wait(1)
+			end
+		end
+		task.wait(2)
+	end
 end)
 
 local autoClicking = false
