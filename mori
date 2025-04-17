@@ -74,8 +74,6 @@ local defaultSettings = {
     AriseModels = {"Jinwoo", "Pucci", "Freeza"},
     AutoCastleCustom = false,
     CastleTargetFloor = "30",
-    AutoCastleBossOut = false,
-    AutoCastleBossFloor = 30,
     AutoBypassDungeon = false,
     AutoCheckDD = false,
     AutoClick = false,
@@ -85,7 +83,8 @@ local defaultSettings = {
     SpecialScript = false,
     AutoHideUI = false,
     AutoSendPetFast = false,
-    TeleportSafe = false,
+    SelectedCheckpoint = "25",
+    BossOutFloor = 0,
 }
 
 for key, value in pairs(defaultSettings) do
@@ -188,19 +187,9 @@ MainTab:CreateToggle({
     end
 })
 
-MainTab:CreateToggle({
-    Name = "Teleport Safe (anti kick)",
-    CurrentValue = settings["TeleportSafe"],
-    Flag = "TeleportSafe",
-    Callback = function(val)
-        settings["TeleportSafe"] = val
-        saveSettings()
-    end
-})
-
 MainTab:CreateDropdown({
     Name = " Chọn loại quái",
-    Options = {"All", "Normal", "Big", "Đánh Boss trước"},
+    Options = {"All", "Normal", "Big", "Đánh Boss trước", "Dungeon + Castle"},
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
     Flag = "FarmScales",
@@ -248,115 +237,88 @@ task.spawn(function()
         ["Big"] = 2
     }
 
-    -- Kiểm tra mob có nằm trong danh sách được chọn không
     local function isScaleAllowed(scale)
-    local selected = settings["FarmScales"] or {}
-
-    -- Nếu chọn "All" → luôn cho phép
-    if table.find(selected, "All") then return true end
-
-    -- Nếu chỉ chọn "Đánh Boss trước" → vẫn farm scale >= 1
-    if table.find(selected, "Đánh Boss trước") then
-        return scale >= 1
-    end
-
-    -- Kiểm tra bình thường
-    local roundedScale = math.floor((scale or 0) + 0.01)
-    local scaleMap = {
-        ["Normal"] = 1,
-        ["Big"] = 2
-    }
-
-    for _, name in ipairs(selected) do
-        if scaleMap[name] == roundedScale then
-            return true
-        end
-    end
-
-    return false
-end
-
-    -- Tìm mob gần nhất, ưu tiên Boss nếu có "Đánh Boss trước"
-    local function findNearestMob()
-        local nearestNormal, nearestBoss
-        local minNormalDist, minBossDist = math.huge, math.huge
         local selected = settings["FarmScales"] or {}
 
-        local function check(uuidPart)
-            local hp = uuidPart:GetAttribute("HP")
-            local scale = uuidPart:GetAttribute("Scale")
-            if not hp or hp <= 0 or not scale then return end
-            if not isScaleAllowed(scale) then return end
+        if table.find(selected, "All") then return true end
+        if table.find(selected, "Đánh Boss trước") then return scale >= 1 end
 
-            local uuid = uuidPart.Name
-            local clientModel = enemiesClient:FindFirstChild(uuid, true)
-
-            local pos = uuidPart.Position
-            if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
-                pos = clientModel.HumanoidRootPart.Position
-            end
-
-            local dist = (pos - rootPart.Position).Magnitude
-            local isBoss = scale >= 2
-
-            if isBoss and table.find(selected, "Đánh Boss trước") then
-                if dist < minBossDist then
-                    minBossDist = dist
-                    nearestBoss = {model = clientModel, part = uuidPart}
-                end
-            elseif dist < minNormalDist then
-                minNormalDist = dist
-                nearestNormal = {model = clientModel, part = uuidPart}
+        local roundedScale = math.floor((scale or 0) + 0.01)
+        for _, name in ipairs(selected) do
+            if scaleMap[name] == roundedScale then
+                return true
             end
         end
 
-        for _, child in ipairs(enemiesServer:GetChildren()) do
-            if child:IsA("Folder") then
+        return false
+    end
+
+    local function findNearestMob()
+    local nearestMob
+    local minDist = math.huge
+    local selected = settings["FarmScales"] or {}
+    local isDungeonCastleOnly = table.find(selected, "Dungeon + Castle") ~= nil
+
+    local function check(uuidPart, skipScaleCheck)
+        local hp = uuidPart:GetAttribute("HP")
+        local scale = uuidPart:GetAttribute("Scale")
+        if not hp or hp <= 0 then return end
+        if not skipScaleCheck and not isScaleAllowed(scale) then return end
+
+        local uuid = uuidPart.Name
+        local clientModel = enemiesClient:FindFirstChild(uuid, true)
+
+        local pos = uuidPart.Position
+        if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
+            pos = clientModel.HumanoidRootPart.Position
+        end
+
+        local dist = (pos - rootPart.Position).Magnitude
+        if dist < minDist then
+            minDist = dist
+            nearestMob = {model = clientModel, part = uuidPart}
+        end
+    end
+
+    for _, child in ipairs(enemiesServer:GetChildren()) do
+        if isDungeonCastleOnly then
+            -- Chỉ check Part ở ngoài, bỏ qua folder, và KHÔNG check scale
+            if child:IsA("Part") then
+                check(child, true)
+            end
+        else
+            if child:IsA("Part") then
+                check(child, false)
+            elseif child:IsA("Folder") then
                 for _, uuidPart in ipairs(child:GetChildren()) do
                     if uuidPart:IsA("Part") then
-                        check(uuidPart)
+                        check(uuidPart, false)
                     end
                 end
-            elseif child:IsA("Part") then
-                check(child)
             end
         end
-
-        if nearestBoss then
-            return nearestBoss.model, nearestBoss.part
-        elseif nearestNormal then
-            return nearestNormal.model, nearestNormal.part
-        else
-            return nil, nil
-        end
     end
 
-    local teleportCounter = 0
-
-    local teleportCounter = 0
-
-local function teleportNearMob(pos)
-    if typeof(pos) ~= "Vector3" then return end
-    local dirVector = (rootPart.Position - pos)
-    if dirVector.Magnitude == 0 then return end
-
-    local success, direction = pcall(function()
-        return dirVector.Unit
-    end)
-    if not success then return end
-
-    local offset = direction * 5 + Vector3.new(0, 3, 0)
-    rootPart.CFrame = CFrame.new(pos + offset, pos)
-
-    -- 🛡️ Teleport Safe logic (luôn đọc realtime từ settings)
-    if settings["TeleportSafe"] then
-        teleportCounter += 1
-        if teleportCounter >= 3 then
-            task.wait(0.7)
-            teleportCounter = 0
-        end
+    if nearestMob then
+        return nearestMob.model, nearestMob.part
+    else
+        return nil, nil
     end
 end
+
+    local function teleportNearMob(pos)
+        if typeof(pos) ~= "Vector3" then return end
+        local dirVector = (rootPart.Position - pos)
+        if dirVector.Magnitude == 0 then return end
+
+        local success, direction = pcall(function()
+            return dirVector.Unit
+        end)
+        if not success then return end
+
+        local offset = direction * 5 + Vector3.new(0, 3, 0)
+        rootPart.CFrame = CFrame.new(pos + offset, pos)
+    end
 
     local function handleMob(model, part)
         if not part then return end
@@ -384,7 +346,6 @@ end
         task.wait(settings["FarmDelay"] or 0.2)
     end
 
-    -- Vòng lặp chính
     while true do
         if settings["AutoFarm"] then
             local model, part = findNearestMob()
@@ -404,7 +365,7 @@ local autoDestroy = settings["AutoDestroy"]
 local selectedModels = settings["AriseModels"]
 
 --  Danh sách tất cả model có thể chọn
-local allModels = {"JinWoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"}  -- bạn có thể thêm tùy ý
+local allModels = {"JinWoo", "Pucci", "Metus", "Freeza", "Esil", "Baran", "Vulcan"}  -- bạn có thể thêm tùy ý
 
 -- 🗡 Toggle: Auto Destroy
 MainTab:CreateToggle({
@@ -420,7 +381,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
 	Name = " Chọn Model để Arise",
-	Options = {"JinWoo", "Pucci", "Denji", "Freeza", "Julius", "Ulquiorra"},
+	Options = {"JinWoo", "Pucci", "Metus", "Freeza", "Esil", "Baran", "Vulcan"},
 	CurrentOption = settings["AriseModels"] or {},
 	MultipleOptions = true, -- Bật multi-select
 	Flag = "AriseModels",
@@ -508,7 +469,7 @@ task.spawn(function()
             }
         }
         remote:FireServer(unpack(args))
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end
 
@@ -516,7 +477,7 @@ end
         if autoDestroy then
             pcall(handleMob)
         end
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end)
 
@@ -597,7 +558,8 @@ task.spawn(function()
                 local dungeonInfo = infoGui and infoGui:FindFirstChild("DungeonInfo")
 
                 if dungeonInfo then
-                    local currentText = dungeonInfo.Text
+                    local textLabel = dungeonInfo:FindFirstChild("TextLabel")
+                    local currentText = textLabel and textLabel.Text or ""
 
                     -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
                     if currentText == "Dungeon Ends in 20s" then
@@ -621,11 +583,9 @@ task.spawn(function()
 
                     -- 🛡️ Auto Bypass Dungeon logic
                     if settings["AutoBypassDungeon"] then
-                        -- Chỉ tạo lại nếu:
-                        -- 1. Không bật AutoCheckDD
                         -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
                         if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
-                            if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
+                            if currentText:match("^Dungeon Ends in %\d+s$") and currentText ~= lastText then
                                 createAndStartDungeon()
                                 hasDoubleDungeonHappened = false
                             end
@@ -644,25 +604,26 @@ end)
 --  Textbox: Nhập số tầng hoặc thông tin tùy ý
 DungeonTab:CreateLabel("Auto castle")
 
-local targetFloor = tonumber(settings["CastleTargetFloor"]) or 30
-local checkingCastle = false
+-- 🔧 Biến toàn cục (không lặp lại)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 local lobbyPlaceId = 87039211657390
 
--- Toggle: Auto Castle Join
-DungeonTab:CreateToggle({
+-- 🔘 Toggle: Auto Castle Join
+local castleJoinToggle = DungeonTab:CreateToggle({
     Name = "Auto Castle Join",
     CurrentValue = settings["AutoCastleCustom"],
     Flag = "AutoCastleCustom",
     Callback = function(val)
         settings["AutoCastleCustom"] = val
+        if val then
+            Rayfield.Flags["AutoCastleCheckpoint"]:Set(false)
+        end
         saveSettings()
 
         if val then
-            -- Gửi JoinCastle mỗi phút từ 45–58
             task.spawn(function()
                 while settings["AutoCastleCustom"] do
                     local minute = os.date("*t").min
@@ -674,162 +635,239 @@ DungeonTab:CreateToggle({
                             }
                         }
                         pcall(function()
-                            ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+                            ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
                         end)
                     end
-                    task.wait(60)
+                    task.wait(3)
                 end
             end)
+        end
+    end
+})
 
-            -- Teleport về lobby khi đến đúng tầng
+-- ✅ Tự động bật lại Auto Castle Join nếu đang lưu là true
+task.delay(0.5, function()
+    if settings["AutoCastleCustom"] then
+        local toggle = Rayfield.Flags["AutoCastleCustom"]
+        if toggle then
+            toggle:Set(false)
+            task.wait(0.05)
+            toggle:Set(true)
+        end
+    end
+end)
+
+-- 🔘 Toggle: Auto Castle Checkpoint
+local castleCheckpointToggle = DungeonTab:CreateToggle({
+    Name = "Auto Castle Checkpoint",
+    CurrentValue = settings["AutoCastleCheckpoint"],
+    Flag = "AutoCastleCheckpoint",
+    Callback = function(val)
+        settings["AutoCastleCheckpoint"] = val
+        if val then
+            Rayfield.Flags["AutoCastleCustom"]:Set(false)
+        end
+        saveSettings()
+
+        if val then
             task.spawn(function()
-                while settings["AutoCastleCustom"] do
-                    if not checkingCastle and targetFloor then
+                while settings["AutoCastleCheckpoint"] do
+                    local minute = os.date("*t").min
+                    if minute >= 45 and minute <= 58 then
+                        local args = {
+                            [1] = {
+                                [1] = {
+                                    ["Event"] = "JoinCastle",
+                                    ["Check"] = true
+                                },
+                                [2] = "\n"
+                            }
+                        }
                         pcall(function()
-                            local roomText = LocalPlayer:WaitForChild("PlayerGui")
-                                :WaitForChild("Hud")
-                                :WaitForChild("UpContanier")
-                                :WaitForChild("Room").Text
-
-                            if typeof(roomText) == "string" and roomText:find("Floor: " .. targetFloor .. "/100") then
-                                checkingCastle = true
-                                task.wait(1)
-                                TeleportService:Teleport(lobbyPlaceId)
-                            end
+                            ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(unpack(args))
                         end)
                     end
-                    task.wait(2)
+                    task.wait(3)
                 end
             end)
         end
     end
 })
 
--- Textbox: Nhập tầng để teleport về
-local castleFloorInput = DungeonTab:CreateInput({
-    Name = "Auto Out Floor (fix)",
-    PlaceholderText = "100",
-    RemoveTextAfterFocusLost = false,
-    Default = tostring(settings["CastleTargetFloor"]),
-    Callback = function(val)
-        local num = tonumber(val)
-        if num then
-            settings["CastleTargetFloor"] = tostring(num)
-            targetFloor = num
-            checkingCastle = false
-            saveSettings()
+-- ✅ Tự động bật lại toggle nếu đang lưu là true (sau khi GUI load xong)
+task.delay(0.5, function()
+    if settings["AutoCastleCheckpoint"] then
+        local toggle = Rayfield.Flags["AutoCastleCheckpoint"]
+        if toggle then
+            toggle:Set(false)
+            task.wait(0.05)
+            toggle:Set(true)
         end
     end
-})
+end)
 
-task.wait(0.1)
-castleFloorInput:Set(settings["CastleTargetFloor"])
 
--- Toggle: Auto Out Khi giết boss
-DungeonTab:CreateToggle({
-    Name = "Auto Out Khi",
-    CurrentValue = settings["AutoCastleBossOut"],
-    Flag = "AutoCastleBossOut",
-    Callback = function(val)
-        settings["AutoCastleBossOut"] = val
+-- 🔽 Dropdown chọn tầng checkpoint
+local teleportFloors = {"25", "50", "75", "100"}
+DungeonTab:CreateDropdown({
+    Name = "Teleport Floor",
+    Options = teleportFloors,
+    CurrentOption = {settings["SelectedCheckpoint"] or "25"},
+    MultipleOptions = false,
+    Flag = "SelectedCheckpoint",
+    Callback = function(option)
+        settings["SelectedCheckpoint"] = typeof(option) == "table" and option[1] or option
         saveSettings()
     end
 })
 
--- Input: Tầng có boss cần giết rồi out
+-- 🌀 Teleport đến checkpoint
+task.spawn(function()
+    local teleported = false
+    local lastFloor = ""
+
+    local checkpointPositions = {
+        ["25"] = CFrame.new(-23996.8671875, 3161.200927734375, 55.12371826171875),
+        ["100"] = CFrame.new(-24050, 3200, 100) -- Cập nhật đúng toạ độ nếu cần
+    }
+
+    while true do
+        if settings["AutoCastleCheckpoint"] then
+            local selectedFloor = tostring(settings["SelectedCheckpoint"] or "25")
+            local checkpointCFrame = checkpointPositions[selectedFloor]
+
+            local roomLabel = LocalPlayer:FindFirstChild("PlayerGui")
+                and LocalPlayer.PlayerGui:FindFirstChild("Hud")
+                and LocalPlayer.PlayerGui.Hud:FindFirstChild("UpContanier")
+                and LocalPlayer.PlayerGui.Hud.UpContanier:FindFirstChild("Room")
+
+            if roomLabel then
+                local currentFloor = tonumber(roomLabel.Text:match("Floor:%s*(%d+)/"))
+                if currentFloor then
+                    if selectedFloor ~= lastFloor then
+                        teleported = false
+                        lastFloor = selectedFloor
+                    end
+
+                    if tostring(currentFloor) == selectedFloor and checkpointCFrame and not teleported then
+                        pcall(function()
+                            local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                            local hrp = char:WaitForChild("HumanoidRootPart", 5)
+                            if hrp then
+                                hrp.CFrame = checkpointCFrame + Vector3.new(0, 5, 0)
+                                teleported = true
+                            end
+                        end)
+                    end
+                end
+            end
+        else
+            teleported = false
+        end
+        task.wait(1)
+    end
+end)
+
+-- 🔢 Input nhập tầng boss để tự động out nếu boss chết
 local bossOutInput = DungeonTab:CreateInput({
-    Name = "Kill boss ở tầng",
-    PlaceholderText = "100",
+    Name = "Floor Boss Out(fix)",
+    PlaceholderText = "VD: 50",
     RemoveTextAfterFocusLost = false,
-    Default = tostring(settings["AutoCastleBossFloor"] or ""),
+    Default = tostring(settings["BossOutFloor"] or ""),
     Callback = function(val)
         local num = tonumber(val)
         if num then
-            settings["AutoCastleBossFloor"] = num
+            settings["BossOutFloor"] = num
             saveSettings()
         end
     end
 })
 
+-- 🧠 Gán lại giá trị đã lưu sau khi GUI dựng xong
 task.delay(0.1, function()
-    bossOutInput:Set(tostring(settings["AutoCastleBossFloor"] or ""))
+    bossOutInput:Set(tostring(settings["BossOutFloor"] or ""))
 end)
 
--- Luồng kiểm tra boss chết để teleport
 task.spawn(function()
-    local enemiesServer = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+    local enemiesServer = workspace.__Main.__Enemies:WaitForChild("Server")
 
     while true do
-        if settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] and tonumber(settings["AutoCastleBossFloor"]) then
+        if settings["AutoCastleCheckpoint"] and tonumber(settings["BossOutFloor"]) then
             local currentFloor = 0
-            local roomText = ""
             pcall(function()
-                roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
-                    :WaitForChild("UpContanier"):WaitForChild("Room").Text
+                local label = LocalPlayer.PlayerGui.Hud.UpContanier.Room
+                local match = label.Text:match("Floor:%s*(%d+)/")
+                if match then currentFloor = tonumber(match) end
             end)
 
-            local match = roomText:match("Floor: (%d+)/100")
-            if match then
-                currentFloor = tonumber(match)
-            end
-
-            local bossFloor = tonumber(settings["AutoCastleBossFloor"])
-
+            local bossFloor = tonumber(settings["BossOutFloor"])
             if currentFloor == bossFloor then
-                while currentFloor == bossFloor and settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] do
-                    -- Quét tất cả boss có Scale >= 2
-                    local trackedBossParts = {}
+                local confirmedBossSpawned = false
+                local waitingBossTimeout = 20
 
-                    for _, folder in ipairs(enemiesServer:GetChildren()) do
-                        if folder:IsA("Folder") then
-                            for _, part in ipairs(folder:GetChildren()) do
-                                if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
-                                    table.insert(trackedBossParts, part)
+                while currentFloor == bossFloor and settings["AutoCastleCheckpoint"] do
+                    local bossParts = {}
+
+                    for _, child in ipairs(enemiesServer:GetChildren()) do
+                        if child:IsA("Part") then
+                            local scale = child:GetAttribute("Scale")
+                            if scale and scale >= 2 then
+                                table.insert(bossParts, child)
+                            end
+                        elseif child:IsA("Folder") then
+                            for _, part in ipairs(child:GetChildren()) do
+                                if part:IsA("Part") then
+                                    local scale = part:GetAttribute("Scale")
+                                    if scale and scale >= 2 then
+                                        table.insert(bossParts, part)
+                                    end
                                 end
                             end
                         end
                     end
 
-                    -- Kiểm tra tất cả boss có còn sống không
-                    local allDead = true
-                    for _, part in ipairs(trackedBossParts) do
-                        local hp = part:GetAttribute("HP")
-                        if hp and hp > 0 then
-                            allDead = false
-                            break
+                    if #bossParts > 0 then
+                        confirmedBossSpawned = true
+                    else
+                        waitingBossTimeout -= 1
+                    end
+
+                    local allDead = false
+                    if confirmedBossSpawned then
+                        allDead = true
+                        for _, part in ipairs(bossParts) do
+                            local hp = part:GetAttribute("HP")
+                            if hp and hp > 0 then
+                                allDead = false
+                                break
+                            end
                         end
                     end
 
-                    -- Nếu tất cả boss đều chết → chờ 2s rồi out
-                    if allDead then
+                    if allDead and confirmedBossSpawned then
                         task.wait(2)
                         TeleportService:Teleport(lobbyPlaceId)
                         break
                     end
 
-                    -- Cập nhật tầng hiện tại
                     pcall(function()
-                        roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
-                            :WaitForChild("UpContanier"):WaitForChild("Room").Text
-                        local matchNew = roomText:match("Floor: (%d+)/100")
-                        if matchNew then
-                            currentFloor = tonumber(matchNew)
-                        end
+                        local label = LocalPlayer.PlayerGui.Hud.UpContanier.Room
+                        local matchNew = label.Text:match("Floor:%s*(%d+)/")
+                        if matchNew then currentFloor = tonumber(matchNew) end
                     end)
 
-                    task.wait(1)
+                    task.wait(0.5)
                 end
             end
         end
-
-        task.wait(1.5)
+        task.wait(1)
     end
 end)
 
 local autoClicking = false
 
 MiscTab:CreateToggle({
-    Name = "AutoClick",
+    Name = "AutoClick",	
     CurrentValue = settings["AutoClick"],
     Flag = "AutoClick",
     Callback = function(val)
