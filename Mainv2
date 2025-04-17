@@ -733,66 +733,53 @@ local teleportDropdown = DungeonTab:CreateDropdown({
 
 -- 🔁 Teleport tới checkpoint 1 lần khi model và part xuất hiện
 task.spawn(function()
-	local teleported = false
-
 	while true do
-		if settings["AutoCastleCheckpoint"] and not teleported then
-			local world = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
+		if settings["AutoCastleCheckpoint"] then
 			local selectedModelName = settings["SelectedCheckpoint"]
-
+			local world = workspace:FindFirstChild("__Main") and workspace.__Main:FindFirstChild("__World")
 			if world and selectedModelName then
 				local model = world:FindFirstChild(selectedModelName)
-
 				if model then
-					local spawnPart = model:FindFirstChild("PlayersSpawns")
-
-					-- Nếu part chưa xuất hiện thì chờ
-					if not spawnPart then
-						local connection
-						connection = model.ChildAdded:Connect(function(child)
-							if child.Name == "PlayersSpawns" and child:IsA("BasePart") then
-								spawnPart = child
-								if connection then connection:Disconnect() end
-							end
-						end)
-
-						local waitTime = 0
-						while not spawnPart and waitTime < 10 do
-							task.wait(1)
-							waitTime += 1
-						end
-
-						if connection then connection:Disconnect() end
+					-- Đợi Buildings.MainRoot.Part xuất hiện
+					local function getTargetPart()
+						local buildings = model:FindFirstChild("Buildings")
+						local mainRoot = buildings and buildings:FindFirstChild("MainRoot")
+						return mainRoot and mainRoot:FindFirstChild("Part")
 					end
 
-					-- Nếu tìm thấy part thì teleport
-					if spawnPart then
+					local timeout = 15
+					local waited = 0
+					local part = getTargetPart()
+
+					while not part and waited < timeout do
+						task.wait(1)
+						part = getTargetPart()
+						waited += 1
+					end
+
+					if part then
 						pcall(function()
 							local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
 							local root = char:WaitForChild("HumanoidRootPart", 5)
 							if root then
-								root.CFrame = spawnPart.CFrame + Vector3.new(0, 5, 0)
-								teleported = true
-								print("✅ Teleported to", selectedModelName)
+								root.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+								print("✅ Teleported to", selectedModelName, "→ MainRoot.Part")
 							end
 						end)
 					else
-						warn("❌ Không tìm thấy 'PlayersSpawns' trong model", selectedModelName)
+						warn("❌ Không tìm thấy Buildings.MainRoot.Part sau", timeout, "giây")
 					end
 				end
 			end
 		end
 
-		-- Reset khi tắt toggle
-		if not settings["AutoCastleCheckpoint"] then
-			teleported = false
+		-- Nếu đang bật thì chỉ thực hiện 1 lần
+		while settings["AutoCastleCheckpoint"] do
+			task.wait(1)
 		end
-
-		task.wait(1)
 	end
 end)
 
--- Textbox: Nhập tầng để teleport về
 -- 📥 Input: Tầng để teleport về lobby khi tới tầng đó
 local castleFloorInput = DungeonTab:CreateInput({
     Name = "Auto Out Floor (fix)",
