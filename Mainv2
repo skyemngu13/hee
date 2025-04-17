@@ -631,7 +631,7 @@ local lobbyPlaceId = 87039211657390
 local castleJoinToggle = nil
 local castleCheckpointToggle = nil
 
--- Toggle: Auto Castle Join
+-- Auto Castle Join (toggle cũ của bạn)
 castleJoinToggle = DungeonTab:CreateToggle({
     Name = "Auto Castle Join",
     CurrentValue = settings["AutoCastleCustom"],
@@ -642,30 +642,10 @@ castleJoinToggle = DungeonTab:CreateToggle({
             castleCheckpointToggle:Set(false)
         end
         saveSettings()
-
-        if val then
-            task.spawn(function()
-                while settings["AutoCastleCustom"] do
-                    local minute = os.date("*t").min
-                    if minute >= 45 and minute <= 58 then
-                        local args = {
-                            [1] = {
-                                [1] = { ["Event"] = "JoinCastle" },
-                                [2] = "\n"
-                            }
-                        }
-                        pcall(function()
-                            ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-                        end)
-                    end
-                    task.wait(3)
-                end
-            end)
-        end
     end
 })
 
--- Toggle: Auto Castle Checkpoint (mới thêm)
+-- Auto Castle Checkpoint (toggle mới)
 castleCheckpointToggle = DungeonTab:CreateToggle({
     Name = "Auto Castle Checkpoint",
     CurrentValue = settings["AutoCastleCheckpoint"],
@@ -676,31 +656,41 @@ castleCheckpointToggle = DungeonTab:CreateToggle({
             castleJoinToggle:Set(false)
         end
         saveSettings()
-
-        if val then
-            task.spawn(function()
-                while settings["AutoCastleCheckpoint"] do
-                    local minute = os.date("*t").min
-                    if minute >= 45 and minute <= 58 then
-                        local args = {
-                            [1] = {
-                                [1] = {
-                                    ["Event"] = "JoinCastle",
-                                    ["Check"] = true
-                                },
-                                [2] = "\n"
-                            }
-                        }
-                        pcall(function()
-                            ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
-                        end)
-                    end
-                    task.wait(3)
-                end
-            end)
-        end
     end
 })
+
+-- ✅ Luồng kiểm tra và tự động join castle/checkpoint (liên tục, luôn luôn chạy)
+task.spawn(function()
+    while true do
+        local minute = os.date("*t").min
+
+        if minute >= 45 and minute <= 58 then
+            if settings["AutoCastleCustom"] then
+                local args = {
+                    [1] = {
+                        [1] = { ["Event"] = "JoinCastle" },
+                        [2] = "\n"
+                    }
+                }
+                pcall(function()
+                    ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+                end)
+
+            elseif settings["AutoCastleCheckpoint"] then
+                local args = {
+                    [1] = {
+                        [1] = { ["Event"] = "JoinCastle", ["Check"] = true },
+                        [2] = "\n"
+                    }
+                }
+                pcall(function()
+                    ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+                end)
+            end
+        end
+        task.wait(2)
+    end
+end)
 
 -- Teleport về lobby khi đến đúng tầng
 task.spawn(function()
