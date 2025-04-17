@@ -627,17 +627,22 @@ local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 local lobbyPlaceId = 87039211657390
 
+local castleJoinToggle = nil
+local castleCheckpointToggle = nil
+
 -- Toggle: Auto Castle Join
-DungeonTab:CreateToggle({
+castleJoinToggle = DungeonTab:CreateToggle({
     Name = "Auto Castle Join",
     CurrentValue = settings["AutoCastleCustom"],
     Flag = "AutoCastleCustom",
     Callback = function(val)
         settings["AutoCastleCustom"] = val
+        if val and castleCheckpointToggle then
+            castleCheckpointToggle:Set(false)
+        end
         saveSettings()
 
         if val then
-            -- Gửi JoinCastle mỗi phút từ 45–58
             task.spawn(function()
                 while settings["AutoCastleCustom"] do
                     local minute = os.date("*t").min
@@ -652,33 +657,72 @@ DungeonTab:CreateToggle({
                             ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
                         end)
                     end
-                    task.wait(60)
-                end
-            end)
-
-            -- Teleport về lobby khi đến đúng tầng
-            task.spawn(function()
-                while settings["AutoCastleCustom"] do
-                    if not checkingCastle and targetFloor then
-                        pcall(function()
-                            local roomText = LocalPlayer:WaitForChild("PlayerGui")
-                                :WaitForChild("Hud")
-                                :WaitForChild("UpContanier")
-                                :WaitForChild("Room").Text
-
-                            if typeof(roomText) == "string" and roomText:find("Floor: " .. targetFloor .. "/100") then
-                                checkingCastle = true
-                                task.wait(1)
-                                TeleportService:Teleport(lobbyPlaceId)
-                            end
-                        end)
-                    end
-                    task.wait(2)
+                    task.wait(3)
                 end
             end)
         end
     end
 })
+
+-- Toggle: Auto Castle Checkpoint (mới thêm)
+castleCheckpointToggle = DungeonTab:CreateToggle({
+    Name = "Auto Castle Checkpoint",
+    CurrentValue = settings["AutoCastleCheckpoint"],
+    Flag = "AutoCastleCheckpoint",
+    Callback = function(val)
+        settings["AutoCastleCheckpoint"] = val
+        if val and castleJoinToggle then
+            castleJoinToggle:Set(false)
+        end
+        saveSettings()
+
+        if val then
+            task.spawn(function()
+                while settings["AutoCastleCheckpoint"] do
+                    local minute = os.date("*t").min
+                    if minute >= 45 and minute <= 58 then
+                        local args = {
+                            [1] = {
+                                [1] = {
+                                    ["Event"] = "JoinCastle",
+                                    ["Check"] = true
+                                },
+                                [2] = "\n"
+                            }
+                        }
+                        pcall(function()
+                            ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent"):FireServer(unpack(args))
+                        end)
+                    end
+                    task.wait(3)
+                end
+            end)
+        end
+    end
+})
+
+-- Teleport về lobby khi đến đúng tầng
+task.spawn(function()
+    while true do
+        if settings["AutoCastleCustom"] then
+            if not checkingCastle and targetFloor then
+                pcall(function()
+                    local roomText = LocalPlayer:WaitForChild("PlayerGui")
+                        :WaitForChild("Hud")
+                        :WaitForChild("UpContanier")
+                        :WaitForChild("Room").Text
+
+                    if typeof(roomText) == "string" and roomText:find("Floor: " .. targetFloor .. "/100") then
+                        checkingCastle = true
+                        task.wait(1)
+                        TeleportService:Teleport(lobbyPlaceId)
+                    end
+                end)
+            end
+        end
+        task.wait(2)
+    end
+end)
 
 -- Textbox: Nhập tầng để teleport về
 local castleFloorInput = DungeonTab:CreateInput({
@@ -752,9 +796,7 @@ task.spawn(function()
 
             if currentFloor == bossFloor then
                 while currentFloor == bossFloor and settings["AutoCastleCustom"] and settings["AutoCastleBossOut"] do
-                    -- Quét tất cả boss có Scale >= 2
                     local trackedBossParts = {}
-
                     for _, folder in ipairs(enemiesServer:GetChildren()) do
                         if folder:IsA("Folder") then
                             for _, part in ipairs(folder:GetChildren()) do
@@ -765,7 +807,6 @@ task.spawn(function()
                         end
                     end
 
-                    -- Kiểm tra tất cả boss có còn sống không
                     local allDead = true
                     for _, part in ipairs(trackedBossParts) do
                         local hp = part:GetAttribute("HP")
@@ -775,14 +816,12 @@ task.spawn(function()
                         end
                     end
 
-                    -- Nếu tất cả boss đều chết → chờ 2s rồi out
                     if allDead then
                         task.wait(2)
                         TeleportService:Teleport(lobbyPlaceId)
                         break
                     end
 
-                    -- Cập nhật tầng hiện tại
                     pcall(function()
                         roomText = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Hud")
                             :WaitForChild("UpContanier"):WaitForChild("Room").Text
@@ -796,7 +835,6 @@ task.spawn(function()
                 end
             end
         end
-
         task.wait(1.5)
     end
 end)
