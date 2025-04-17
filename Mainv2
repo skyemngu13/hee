@@ -743,47 +743,44 @@ task.spawn(function()
 			if world and selectedModelName then
 				local model = world:FindFirstChild(selectedModelName)
 
-				if model then
-					local spawnPart = model:FindFirstChild("PlayersSpawns")
-
-					-- Nếu part chưa xuất hiện thì chờ
-					if not spawnPart then
-						local connection
-						connection = model.ChildAdded:Connect(function(child)
-							if child.Name == "PlayersSpawns" and child:IsA("BasePart") then
-								spawnPart = child
-								if connection then connection:Disconnect() end
-							end
-						end)
-
-						local waitTime = 0
-						while not spawnPart and waitTime < 10 do
-							task.wait(1)
-							waitTime += 1
+				-- Nếu model chưa tồn tại → đợi nó xuất hiện
+				if not model then
+					local found = false
+					local connection
+					connection = world.ChildAdded:Connect(function(child)
+						if child.Name == selectedModelName and child:IsA("Model") then
+							model = child
+							found = true
+							if connection then connection:Disconnect() end
 						end
+					end)
 
-						if connection then connection:Disconnect() end
+					local startTime = os.clock()
+					while not found and os.clock() - startTime < 15 do
+						task.wait(1)
 					end
 
-					-- Nếu tìm thấy part thì teleport
-					if spawnPart then
-						pcall(function()
-							local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-							local root = char:WaitForChild("HumanoidRootPart", 5)
-							if root then
-								root.CFrame = spawnPart.CFrame + Vector3.new(0, 5, 0)
-								teleported = true
-								print("✅ Teleported to", selectedModelName)
-							end
-						end)
-					else
-						warn("❌ Không tìm thấy 'PlayersSpawns' trong model", selectedModelName)
-					end
+					if connection then connection:Disconnect() end
+				end
+
+				-- Sau khi đã có model → thực hiện teleport
+				if model and model:IsA("Model") then
+					pcall(function()
+						local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+						local root = char:WaitForChild("HumanoidRootPart", 5)
+						if root then
+							local pivotPos = model:GetPivot().Position
+							root.CFrame = CFrame.new(pivotPos + Vector3.new(0, 5, 0))
+							teleported = true
+							print("✅ Teleported to", selectedModelName)
+						end
+					end)
+				else
+					warn("❌ Không tìm thấy model:", selectedModelName)
 				end
 			end
 		end
 
-		-- Reset khi tắt toggle
 		if not settings["AutoCastleCheckpoint"] then
 			teleported = false
 		end
