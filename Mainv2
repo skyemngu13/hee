@@ -896,7 +896,8 @@ task.spawn(function()
     }
 
     while true do
-        if settings["AutoCastleCheckpoint"] then
+        -- ❌ Không chạy nếu đang ở lobby
+        if game.PlaceId ~= 87039211657390 and settings["AutoCastleCheckpoint"] then
             local selectedFloor = tostring(settings["SelectedCheckpoint"] or "25")
             local checkpointCFrame = checkpointPositions[selectedFloor]
 
