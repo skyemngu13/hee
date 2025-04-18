@@ -235,7 +235,7 @@ task.spawn(function()
     local enemiesServer = enemiesRoot:WaitForChild("Server")
     local enemiesClient = enemiesRoot:WaitForChild("Client")
 
-    -- ⚖️ Map scale
+    -- ⚖️ Scale Mapping
     local scaleMap = {
         ["Normal"] = 1,
         ["Big"] = 2
@@ -246,9 +246,6 @@ task.spawn(function()
         local selected = settings["FarmScales"] or {}
 
         if table.find(selected, "All") then return true end
-        if table.find(selected, "Đánh Boss trước") then
-            return scale >= 1
-        end
 
         local roundedScale = math.floor((scale or 0) + 0.01)
         for _, name in ipairs(selected) do
@@ -265,7 +262,7 @@ task.spawn(function()
         local nearestNormal, nearestBoss
         local minNormalDist, minBossDist = math.huge, math.huge
         local selected = settings["FarmScales"] or {}
-        local isOnlyCastleParts = settings["OnlyCastleParts"]
+        local onlyCastleParts = settings["OnlyCastleParts"]
         local prioritizeBoss = table.find(selected, "Đánh Boss trước") ~= nil
 
         local function check(uuidPart)
@@ -283,9 +280,8 @@ task.spawn(function()
             end
 
             local dist = (pos - rootPart.Position).Magnitude
-            local isBoss = scale >= 2
 
-            if isBoss and prioritizeBoss then
+            if scale >= 2 and prioritizeBoss then
                 if dist < minBossDist then
                     minBossDist = dist
                     nearestBoss = {model = clientModel, part = uuidPart}
@@ -297,54 +293,52 @@ task.spawn(function()
         end
 
         for _, child in ipairs(enemiesServer:GetChildren()) do
-    if isOnlyCastleParts then
-        -- Chỉ đánh mob ở ngoài (không vào folder)
-        if child:IsA("Part") then
-            check(child)
-        end
-    else
-        -- Đánh tất cả (cả ngoài và trong folder)
-        if child:IsA("Part") then
-            check(child)
-        elseif child:IsA("Folder") then
-            for _, uuidPart in ipairs(child:GetChildren()) do
-                if uuidPart:IsA("Part") then
-                    check(uuidPart)
+            if onlyCastleParts then
+                if child:IsA("Part") then
+                    check(child)
+                end
+            else
+                if child:IsA("Part") then
+                    check(child)
+                elseif child:IsA("Folder") then
+                    for _, uuidPart in ipairs(child:GetChildren()) do
+                        if uuidPart:IsA("Part") then
+                            check(uuidPart)
+                        end
+                    end
                 end
             end
         end
-    end
-end
 
-        if nearestBoss then
+        if prioritizeBoss and nearestBoss then
             return nearestBoss.model, nearestBoss.part
         elseif nearestNormal then
             return nearestNormal.model, nearestNormal.part
+        elseif nearestBoss then
+            return nearestBoss.model, nearestBoss.part
         else
             return nil, nil
         end
     end
 
-    -- 🚶‍♂️ Teleport đến mob
+    -- 🚶‍♂️ Dịch chuyển đến mob
     local function teleportNearMob(pos)
         if typeof(pos) ~= "Vector3" then return end
         local dirVector = (rootPart.Position - pos)
         if dirVector.Magnitude == 0 then return end
 
-        local success, direction = pcall(function()
-            return dirVector.Unit
-        end)
-        if not success then return end
+        local ok, direction = pcall(function() return dirVector.Unit end)
+        if not ok then return end
 
         local offset = direction * 5 + Vector3.new(0, 3, 0)
         rootPart.CFrame = CFrame.new(pos + offset, pos)
     end
 
-    -- ⚔️ Xử lý đánh mob
+    -- ⚔️ Đánh mob
     local function handleMob(model, part)
         if not part then return end
 
-        local function getTargetPosition()
+        local function getTargetPos()
             if model and model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then
                 return model.HumanoidRootPart.Position
             elseif part:IsA("Part") then
@@ -354,7 +348,7 @@ end
         end
 
         while settings["AutoFarm"] and part:IsDescendantOf(workspace) and (part:GetAttribute("HP") or 0) > 0 do
-            local targetPos = getTargetPosition()
+            local targetPos = getTargetPos()
             if targetPos then
                 local dist = (targetPos - rootPart.Position).Magnitude
                 if dist > 7 then
@@ -515,6 +509,55 @@ DungeonTab:CreateToggle({
     end
 })
 
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+
+    local enemiesRoot = workspace:WaitForChild("__Main"):WaitForChild("__Enemies")
+    local enemiesServer = enemiesRoot:WaitForChild("Server")
+    local enemiesClient = enemiesRoot:WaitForChild("Client")
+
+    while true do
+        if settings["OnlyCastleParts"] and settings["AutoFarm"] then
+            local nearestPart = nil
+            local minDist = math.huge
+
+            -- 🔍 Quét các Part trực tiếp trong Server
+            for _, obj in ipairs(enemiesServer:GetChildren()) do
+                if obj:IsA("Part") then
+                    local hp = obj:GetAttribute("HP")
+                    if hp and hp > 0 then
+                        local dist = (obj.Position - rootPart.Position).Magnitude
+                        if dist < minDist then
+                            minDist = dist
+                            nearestPart = obj
+                        end
+                    end
+                end
+            end
+
+            if nearestPart then
+                -- Teleport lại gần
+                local offset = (rootPart.Position - nearestPart.Position).Unit * 5 + Vector3.new(0, 3, 0)
+                rootPart.CFrame = CFrame.new(nearestPart.Position + offset, nearestPart.Position)
+
+                -- Chờ mob chết
+                while settings["AutoFarm"] and nearestPart:IsDescendantOf(workspace) and (nearestPart:GetAttribute("HP") or 0) > 0 do
+                    task.wait(0.1)
+                end
+
+                -- Delay sau khi tiêu diệt
+                task.wait(settings["FarmDelay"] or 0.2)
+            else
+                task.wait(0.2)
+            end
+        else
+            task.wait(0.5)
+        end
+    end
+end)
 
 -- 🛡Auto Bypass Dungeon Toggle 
 DungeonTab:CreateToggle({
