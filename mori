@@ -190,8 +190,8 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateDropdown({
-    Name = " Chọn loại quái",
-    Options = {"All", "Normal", "Big", "Đánh Boss trước", "Dungeon + Castle"},
+    Name = "Chọn loại quái",
+    Options = {"All", "Normal", "Big", "BossFirst", "DungeonOnly"}, -- 👈 sửa chỗ này
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
     Flag = "FarmScales",
@@ -234,16 +234,17 @@ task.spawn(function()
     local enemiesServer = enemiesRoot:WaitForChild("Server")
     local enemiesClient = enemiesRoot:WaitForChild("Client")
 
+    -- ⚖️ Map scale
     local scaleMap = {
         ["Normal"] = 1,
         ["Big"] = 2
     }
 
+    -- ✅ Kiểm tra scale có hợp lệ không
     local function isScaleAllowed(scale)
         local selected = settings["FarmScales"] or {}
 
         if table.find(selected, "All") then return true end
-        if table.find(selected, "Đánh Boss trước") then return scale >= 1 end
 
         local roundedScale = math.floor((scale or 0) + 0.01)
         for _, name in ipairs(selected) do
@@ -255,59 +256,78 @@ task.spawn(function()
         return false
     end
 
+    -- 🧠 Tìm quái gần nhất (ưu tiên Boss nếu bật)
     local function findNearestMob()
-    local nearestMob
-    local minDist = math.huge
-    local selected = settings["FarmScales"] or {}
-    local isDungeonCastleOnly = table.find(selected, "Dungeon + Castle") ~= nil
+        local nearestNormal, nearestBoss
+        local minNormalDist, minBossDist = math.huge, math.huge
+        local selected = settings["FarmScales"] or {}
+        local isDungeonCastleOnly = table.find(selected, "DungeonOnly") ~= nil
+        local prioritizeBoss = table.find(selected, "BossFirst") ~= nil
 
-    local function check(uuidPart, skipScaleCheck)
-        local hp = uuidPart:GetAttribute("HP")
-        local scale = uuidPart:GetAttribute("Scale")
-        if not hp or hp <= 0 then return end
-        if not skipScaleCheck and not isScaleAllowed(scale) then return end
+        local function check(uuidPart, skipScaleCheck)
+            local hp = uuidPart:GetAttribute("HP")
+            local scale = uuidPart:GetAttribute("Scale")
+            if not hp or hp <= 0 then return end
+            if not skipScaleCheck and not isScaleAllowed(scale) then return end
 
-        local uuid = uuidPart.Name
-        local clientModel = enemiesClient:FindFirstChild(uuid, true)
+            local uuid = uuidPart.Name
+            local clientModel = enemiesClient:FindFirstChild(uuid, true)
 
-        local pos = uuidPart.Position
-        if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
-            pos = clientModel.HumanoidRootPart.Position
-        end
-
-        local dist = (pos - rootPart.Position).Magnitude
-        if dist < minDist then
-            minDist = dist
-            nearestMob = {model = clientModel, part = uuidPart}
-        end
-    end
-
-    for _, child in ipairs(enemiesServer:GetChildren()) do
-        if isDungeonCastleOnly then
-            -- Chỉ check Part ở ngoài, bỏ qua folder, và KHÔNG check scale
-            if child:IsA("Part") then
-                check(child, true)
+            local pos = uuidPart.Position
+            if clientModel and clientModel:IsA("Model") and clientModel:FindFirstChild("HumanoidRootPart") then
+                pos = clientModel.HumanoidRootPart.Position
             end
-        else
-            if child:IsA("Part") then
-                check(child, false)
-            elseif child:IsA("Folder") then
-                for _, uuidPart in ipairs(child:GetChildren()) do
-                    if uuidPart:IsA("Part") then
-                        check(uuidPart, false)
+
+            local dist = (pos - rootPart.Position).Magnitude
+
+            if scale and scale >= 2 and prioritizeBoss then
+                if dist < minBossDist then
+                    minBossDist = dist
+                    nearestBoss = {model = clientModel, part = uuidPart}
+                end
+            elseif not prioritizeBoss then
+                if dist < minNormalDist then
+                    minNormalDist = dist
+                    nearestNormal = {model = clientModel, part = uuidPart}
+                end
+            elseif not nearestBoss then
+                -- fallback nếu không có boss
+                if dist < minNormalDist then
+                    minNormalDist = dist
+                    nearestNormal = {model = clientModel, part = uuidPart}
+                end
+            end
+        end
+
+        -- 🧩 Quét mob trong Server
+        for _, child in ipairs(enemiesServer:GetChildren()) do
+            if isDungeonCastleOnly then
+                if child:IsA("Part") then
+                    check(child, true)
+                end
+            else
+                if child:IsA("Part") then
+                    check(child, false)
+                elseif child:IsA("Folder") then
+                    for _, uuidPart in ipairs(child:GetChildren()) do
+                        if uuidPart:IsA("Part") then
+                            check(uuidPart, false)
+                        end
                     end
                 end
             end
         end
+
+        if nearestBoss then
+            return nearestBoss.model, nearestBoss.part
+        elseif nearestNormal then
+            return nearestNormal.model, nearestNormal.part
+        else
+            return nil, nil
+        end
     end
 
-    if nearestMob then
-        return nearestMob.model, nearestMob.part
-    else
-        return nil, nil
-    end
-end
-
+    -- 🚶‍♂️ Teleport đến mob
     local function teleportNearMob(pos)
         if typeof(pos) ~= "Vector3" then return end
         local dirVector = (rootPart.Position - pos)
@@ -322,6 +342,7 @@ end
         rootPart.CFrame = CFrame.new(pos + offset, pos)
     end
 
+    -- ⚔️ Xử lý đánh mob
     local function handleMob(model, part)
         if not part then return end
 
@@ -348,6 +369,7 @@ end
         task.wait(settings["FarmDelay"] or 0.2)
     end
 
+    -- 🔁 Vòng lặp chính
     while true do
         if settings["AutoFarm"] then
             local model, part = findNearestMob()
@@ -885,6 +907,7 @@ end)
 
 task.spawn(function()
     local enemiesServer = workspace.__Main.__Enemies:WaitForChild("Server")
+    local waitForBossTime = 10 -- ⏱ tối đa 10s đợi boss spawn
 
     while true do
         if settings["AutoCastleCheckpoint"] and tonumber(settings["BossOutFloor"]) then
@@ -898,44 +921,39 @@ task.spawn(function()
             local bossFloor = tonumber(settings["BossOutFloor"])
             if currentFloor == bossFloor then
                 local confirmedBossSpawned = false
-                local waitingBossTimeout = 20
+                local bossTimer = 0
 
+                -- 🔁 Theo dõi boss trong tầng này
                 while currentFloor == bossFloor and settings["AutoCastleCheckpoint"] do
                     local bossParts = {}
-
-                    for _, child in ipairs(enemiesServer:GetChildren()) do
-                        if child:IsA("Part") then
-                            local scale = child:GetAttribute("Scale")
-                            if scale and scale >= 2 then
-                                table.insert(bossParts, child)
-                            end
-                        elseif child:IsA("Folder") then
-                            for _, part in ipairs(child:GetChildren()) do
-                                if part:IsA("Part") then
-                                    local scale = part:GetAttribute("Scale")
-                                    if scale and scale >= 2 then
-                                        table.insert(bossParts, part)
-                                    end
+                    for _, folder in ipairs(enemiesServer:GetChildren()) do
+                        if folder:IsA("Folder") then
+                            for _, part in ipairs(folder:GetChildren()) do
+                                if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
+                                    table.insert(bossParts, part)
                                 end
                             end
                         end
                     end
 
+                    -- ✅ Boss đã thật sự xuất hiện
                     if #bossParts > 0 then
                         confirmedBossSpawned = true
                     else
-                        waitingBossTimeout -= 1
+                        bossTimer += 0.5
+                        if bossTimer >= waitForBossTime then
+                            -- ❌ Không thấy boss sau 10s → coi như tầng này không có boss
+                            break
+                        end
                     end
 
-                    local allDead = false
-                    if confirmedBossSpawned then
-                        allDead = true
-                        for _, part in ipairs(bossParts) do
-                            local hp = part:GetAttribute("HP")
-                            if hp and hp > 0 then
-                                allDead = false
-                                break
-                            end
+                    -- ☠️ Nếu boss spawn → theo dõi xem có chết chưa
+                    local allDead = confirmedBossSpawned
+                    for _, part in ipairs(bossParts) do
+                        local hp = part:GetAttribute("HP")
+                        if hp and hp > 0 then
+                            allDead = false
+                            break
                         end
                     end
 
@@ -945,13 +963,14 @@ task.spawn(function()
                         break
                     end
 
+                    -- 🔄 Cập nhật lại tầng
                     pcall(function()
                         local label = LocalPlayer.PlayerGui.Hud.UpContanier.Room
                         local matchNew = label.Text:match("Floor:%s*(%d+)/")
                         if matchNew then currentFloor = tonumber(matchNew) end
                     end)
 
-                    task.wait(0.5)
+                    task.wait(0.5) -- 🕐 kiểm tra mỗi 0.5s
                 end
             end
         end
