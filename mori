@@ -296,22 +296,24 @@ task.spawn(function()
         end
 
         for _, child in ipairs(enemiesServer:GetChildren()) do
-            if isDungeonOnly then
-                if child:IsA("Part") then
-                    check(child)
-                end
-            else
-                if child:IsA("Part") then
-                    check(child)
-                elseif child:IsA("Folder") then
-                    for _, uuidPart in ipairs(child:GetChildren()) do
-                        if uuidPart:IsA("Part") then
-                            check(uuidPart)
-                        end
-                    end
+    if isDungeonOnly then
+        -- Chỉ đánh mob ở ngoài (không vào folder)
+        if child:IsA("Part") then
+            check(child)
+        end
+    else
+        -- Đánh tất cả (cả ngoài và trong folder)
+        if child:IsA("Part") then
+            check(child)
+        elseif child:IsA("Folder") then
+            for _, uuidPart in ipairs(child:GetChildren()) do
+                if uuidPart:IsA("Part") then
+                    check(uuidPart)
                 end
             end
         end
+    end
+end
 
         if nearestBoss then
             return nearestBoss.model, nearestBoss.part
@@ -901,72 +903,22 @@ task.delay(0.1, function()
 end)
 
 task.spawn(function()
-    local enemiesServer = workspace.__Main.__Enemies:WaitForChild("Server")
-    local waitForBossTime = 10 -- ⏱ tối đa 10s đợi boss spawn
-
     while true do
         if settings["AutoCastleCheckpoint"] and tonumber(settings["BossOutFloor"]) then
             local currentFloor = 0
+
             pcall(function()
                 local label = LocalPlayer.PlayerGui.Hud.UpContanier.Room
                 local match = label.Text:match("Floor:%s*(%d+)/")
-                if match then currentFloor = tonumber(match) end
+                if match then
+                    currentFloor = tonumber(match)
+                end
             end)
 
             local bossFloor = tonumber(settings["BossOutFloor"])
             if currentFloor == bossFloor then
-                local confirmedBossSpawned = false
-                local bossTimer = 0
-
-                -- 🔁 Theo dõi boss trong tầng này
-                while currentFloor == bossFloor and settings["AutoCastleCheckpoint"] do
-                    local bossParts = {}
-                    for _, folder in ipairs(enemiesServer:GetChildren()) do
-                        if folder:IsA("Folder") then
-                            for _, part in ipairs(folder:GetChildren()) do
-                                if part:IsA("Part") and (part:GetAttribute("Scale") or 0) >= 2 then
-                                    table.insert(bossParts, part)
-                                end
-                            end
-                        end
-                    end
-
-                    -- ✅ Boss đã thật sự xuất hiện
-                    if #bossParts > 0 then
-                        confirmedBossSpawned = true
-                    else
-                        bossTimer += 0.5
-                        if bossTimer >= waitForBossTime then
-                            -- ❌ Không thấy boss sau 10s → coi như tầng này không có boss
-                            break
-                        end
-                    end
-
-                    -- ☠️ Nếu boss spawn → theo dõi xem có chết chưa
-                    local allDead = confirmedBossSpawned
-                    for _, part in ipairs(bossParts) do
-                        local hp = part:GetAttribute("HP")
-                        if hp and hp > 0 then
-                            allDead = false
-                            break
-                        end
-                    end
-
-                    if allDead and confirmedBossSpawned then
-                        task.wait(2)
-                        TeleportService:Teleport(lobbyPlaceId)
-                        break
-                    end
-
-                    -- 🔄 Cập nhật lại tầng
-                    pcall(function()
-                        local label = LocalPlayer.PlayerGui.Hud.UpContanier.Room
-                        local matchNew = label.Text:match("Floor:%s*(%d+)/")
-                        if matchNew then currentFloor = tonumber(matchNew) end
-                    end)
-
-                    task.wait(0.5) -- 🕐 kiểm tra mỗi 0.5s
-                end
+                task.wait(1.5)
+                TeleportService:Teleport(lobbyPlaceId)
             end
         end
         task.wait(1)
