@@ -510,21 +510,17 @@ DungeonTab:CreateToggle({
 })
 
 task.spawn(function()
-    local Players = game:GetService("Players")
-    local player = Players.LocalPlayer
+    local player = game.Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
     local rootPart = character:WaitForChild("HumanoidRootPart")
 
-    local enemiesRoot = workspace:WaitForChild("__Main"):WaitForChild("__Enemies")
-    local enemiesServer = enemiesRoot:WaitForChild("Server")
-    local enemiesClient = enemiesRoot:WaitForChild("Client")
+    local enemiesServer = workspace.__Main.__Enemies:WaitForChild("Server")
 
     while true do
-        if settings["OnlyCastleParts"] and settings["AutoFarm"] then
+        if settings["OnlyCastleParts"] then
             local nearestPart = nil
             local minDist = math.huge
 
-            -- 🔍 Quét các Part trực tiếp trong Server
             for _, obj in ipairs(enemiesServer:GetChildren()) do
                 if obj:IsA("Part") then
                     local hp = obj:GetAttribute("HP")
@@ -539,16 +535,13 @@ task.spawn(function()
             end
 
             if nearestPart then
-                -- Teleport lại gần
                 local offset = (rootPart.Position - nearestPart.Position).Unit * 5 + Vector3.new(0, 3, 0)
                 rootPart.CFrame = CFrame.new(nearestPart.Position + offset, nearestPart.Position)
 
-                -- Chờ mob chết
-                while settings["AutoFarm"] and nearestPart:IsDescendantOf(workspace) and (nearestPart:GetAttribute("HP") or 0) > 0 do
+                while settings["OnlyCastleParts"] and nearestPart:IsDescendantOf(workspace) and (nearestPart:GetAttribute("HP") or 0) > 0 do
                     task.wait(0.1)
                 end
 
-                -- Delay sau khi tiêu diệt
                 task.wait(settings["FarmDelay"] or 0.2)
             else
                 task.wait(0.2)
