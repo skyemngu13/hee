@@ -192,7 +192,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
     Name = " Chọn loại quái",
-    Options = {"All", "Normal", "Big", "Đánh Boss trước",},
+    Options = {"All", "Normal", "Big", "Đánh Boss trước"},
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
     Flag = "FarmScales",
@@ -235,35 +235,44 @@ task.spawn(function()
     local enemiesServer = enemiesRoot:WaitForChild("Server")
     local enemiesClient = enemiesRoot:WaitForChild("Client")
 
-    -- ⚖️ Scale Mapping
     local scaleMap = {
         ["Normal"] = 1,
         ["Big"] = 2
     }
 
-    -- ✅ Kiểm tra scale hợp lệ
+    -- Kiểm tra mob có nằm trong danh sách được chọn không
     local function isScaleAllowed(scale)
-        local selected = settings["FarmScales"] or {}
+    local selected = settings["FarmScales"] or {}
 
-        if table.find(selected, "All") then return true end
+    -- Nếu chọn "All" → luôn cho phép
+    if table.find(selected, "All") then return true end
 
-        local roundedScale = math.floor((scale or 0) + 0.01)
-        for _, name in ipairs(selected) do
-            if scaleMap[name] == roundedScale then
-                return true
-            end
-        end
-
-        return false
+    -- Nếu chỉ chọn "Đánh Boss trước" → vẫn farm scale >= 1
+    if table.find(selected, "Đánh Boss trước") then
+        return scale >= 1
     end
 
-    -- 🧠 Tìm mob gần nhất (ưu tiên Boss nếu có)
+    -- Kiểm tra bình thường
+    local roundedScale = math.floor((scale or 0) + 0.01)
+    local scaleMap = {
+        ["Normal"] = 1,
+        ["Big"] = 2
+    }
+
+    for _, name in ipairs(selected) do
+        if scaleMap[name] == roundedScale then
+            return true
+        end
+    end
+
+    return false
+end
+
+    -- Tìm mob gần nhất, ưu tiên Boss nếu có "Đánh Boss trước"
     local function findNearestMob()
         local nearestNormal, nearestBoss
         local minNormalDist, minBossDist = math.huge, math.huge
         local selected = settings["FarmScales"] or {}
-        local onlyCastleParts = settings["OnlyCastleParts"]
-        local prioritizeBoss = table.find(selected, "Đánh Boss trước") ~= nil
 
         local function check(uuidPart)
             local hp = uuidPart:GetAttribute("HP")
@@ -280,8 +289,9 @@ task.spawn(function()
             end
 
             local dist = (pos - rootPart.Position).Magnitude
+            local isBoss = scale >= 2
 
-            if scale >= 2 and prioritizeBoss then
+            if isBoss and table.find(selected, "Đánh Boss trước") then
                 if dist < minBossDist then
                     minBossDist = dist
                     nearestBoss = {model = clientModel, part = uuidPart}
@@ -293,52 +303,44 @@ task.spawn(function()
         end
 
         for _, child in ipairs(enemiesServer:GetChildren()) do
-            if onlyCastleParts then
-                if child:IsA("Part") then
-                    check(child)
-                end
-            else
-                if child:IsA("Part") then
-                    check(child)
-                elseif child:IsA("Folder") then
-                    for _, uuidPart in ipairs(child:GetChildren()) do
-                        if uuidPart:IsA("Part") then
-                            check(uuidPart)
-                        end
+            if child:IsA("Folder") then
+                for _, uuidPart in ipairs(child:GetChildren()) do
+                    if uuidPart:IsA("Part") then
+                        check(uuidPart)
                     end
                 end
+            elseif child:IsA("Part") then
+                check(child)
             end
         end
 
-        if prioritizeBoss and nearestBoss then
+        if nearestBoss then
             return nearestBoss.model, nearestBoss.part
         elseif nearestNormal then
             return nearestNormal.model, nearestNormal.part
-        elseif nearestBoss then
-            return nearestBoss.model, nearestBoss.part
         else
             return nil, nil
         end
     end
 
-    -- 🚶‍♂️ Dịch chuyển đến mob
     local function teleportNearMob(pos)
         if typeof(pos) ~= "Vector3" then return end
         local dirVector = (rootPart.Position - pos)
         if dirVector.Magnitude == 0 then return end
 
-        local ok, direction = pcall(function() return dirVector.Unit end)
-        if not ok then return end
+        local success, direction = pcall(function()
+            return dirVector.Unit
+        end)
+        if not success then return end
 
         local offset = direction * 5 + Vector3.new(0, 3, 0)
         rootPart.CFrame = CFrame.new(pos + offset, pos)
     end
 
-    -- ⚔️ Đánh mob
     local function handleMob(model, part)
         if not part then return end
 
-        local function getTargetPos()
+        local function getTargetPosition()
             if model and model:IsA("Model") and model:FindFirstChild("HumanoidRootPart") then
                 return model.HumanoidRootPart.Position
             elseif part:IsA("Part") then
@@ -348,7 +350,7 @@ task.spawn(function()
         end
 
         while settings["AutoFarm"] and part:IsDescendantOf(workspace) and (part:GetAttribute("HP") or 0) > 0 do
-            local targetPos = getTargetPos()
+            local targetPos = getTargetPosition()
             if targetPos then
                 local dist = (targetPos - rootPart.Position).Magnitude
                 if dist > 7 then
@@ -361,7 +363,7 @@ task.spawn(function()
         task.wait(settings["FarmDelay"] or 0.2)
     end
 
-    -- 🔁 Vòng lặp chính
+    -- Vòng lặp chính
     while true do
         if settings["AutoFarm"] then
             local model, part = findNearestMob()
