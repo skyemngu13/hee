@@ -884,7 +884,7 @@ end)
 
 -- 🔢 Input nhập tầng boss để tự động out nếu boss chết
 local bossOutInput = DungeonTab:CreateInput({
-    Name = "Floor Boss Out(fix)",
+    Name = "Auto out floor",
     PlaceholderText = "VD: 50",
     RemoveTextAfterFocusLost = false,
     Default = tostring(settings["BossOutFloor"] or ""),
