@@ -72,6 +72,7 @@ local defaultSettings = {
     FarmDelay = 0.2,
     AutoDestroy = false,
     AriseModels = {"Jinwoo", "Pucci", "Freeza"},
+    OnlyCastleParts = false,
     AutoCastleCustom = false,
     CastleTargetFloor = "30",
     AutoBypassDungeon = false,
@@ -191,7 +192,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
     Name = " Chọn loại quái",
-    Options = {"All", "Normal", "Big", "Đánh Boss trước", "Dungeon + Castle"},
+    Options = {"All", "Normal", "Big", "Đánh Boss trước",},
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
     Flag = "FarmScales",
@@ -264,7 +265,7 @@ task.spawn(function()
         local nearestNormal, nearestBoss
         local minNormalDist, minBossDist = math.huge, math.huge
         local selected = settings["FarmScales"] or {}
-        local isDungeonOnly = table.find(selected, "Dungeon + Castle") ~= nil
+        local isOnlyCastleParts = settings["OnlyCastleParts"]
         local prioritizeBoss = table.find(selected, "Đánh Boss trước") ~= nil
 
         local function check(uuidPart)
@@ -296,7 +297,7 @@ task.spawn(function()
         end
 
         for _, child in ipairs(enemiesServer:GetChildren()) do
-    if isDungeonOnly then
+    if isOnlyCastleParts then
         -- Chỉ đánh mob ở ngoài (không vào folder)
         if child:IsA("Part") then
             check(child)
@@ -503,6 +504,17 @@ end
 end)
 
 DungeonTab:CreateLabel("Auto farm Dungeon")
+
+DungeonTab:CreateToggle({
+    Name = "Dungeon + Castle farm",
+    CurrentValue = settings["OnlyCastleParts"],
+    Flag = "OnlyCastleParts",
+    Callback = function(val)
+        settings["OnlyCastleParts"] = val
+        saveSettings()
+    end
+})
+
 
 -- 🛡Auto Bypass Dungeon Toggle 
 DungeonTab:CreateToggle({
