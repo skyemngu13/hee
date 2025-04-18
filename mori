@@ -280,18 +280,12 @@ task.spawn(function()
 
             local dist = (pos - rootPart.Position).Magnitude
 
-            if scale and scale >= 2 and prioritizeBoss then
+            if scale and scale >= 2 then
                 if dist < minBossDist then
                     minBossDist = dist
                     nearestBoss = {model = clientModel, part = uuidPart}
                 end
-            elseif not prioritizeBoss then
-                if dist < minNormalDist then
-                    minNormalDist = dist
-                    nearestNormal = {model = clientModel, part = uuidPart}
-                end
-            elseif not nearestBoss then
-                -- fallback nếu không có boss
+            else
                 if dist < minNormalDist then
                     minNormalDist = dist
                     nearestNormal = {model = clientModel, part = uuidPart}
@@ -318,10 +312,13 @@ task.spawn(function()
             end
         end
 
-        if nearestBoss then
+        -- ✅ Ưu tiên boss nếu có
+        if prioritizeBoss and nearestBoss then
             return nearestBoss.model, nearestBoss.part
         elseif nearestNormal then
             return nearestNormal.model, nearestNormal.part
+        elseif nearestBoss then
+            return nearestBoss.model, nearestBoss.part
         else
             return nil, nil
         end
