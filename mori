@@ -190,8 +190,8 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateDropdown({
-    Name = "Chọn loại quái",
-    Options = {"All", "Normal", "Big", "BossFirst", "DungeonOnly"}, -- 👈 sửa chỗ này
+    Name = " Chọn loại quái",
+    Options = {"All", "Normal", "Big", "Đánh Boss trước", "Dungeon + Castle"},
     MultiSelection = true,
     CurrentOption = settings["FarmScales"],
     Flag = "FarmScales",
@@ -240,11 +240,14 @@ task.spawn(function()
         ["Big"] = 2
     }
 
-    -- ✅ Kiểm tra scale có hợp lệ không
+    -- ✅ Kiểm tra scale hợp lệ
     local function isScaleAllowed(scale)
         local selected = settings["FarmScales"] or {}
 
         if table.find(selected, "All") then return true end
+        if table.find(selected, "Đánh Boss trước") then
+            return scale >= 1
+        end
 
         local roundedScale = math.floor((scale or 0) + 0.01)
         for _, name in ipairs(selected) do
@@ -256,19 +259,19 @@ task.spawn(function()
         return false
     end
 
-    -- 🧠 Tìm quái gần nhất (ưu tiên Boss nếu bật)
+    -- 🧠 Tìm mob gần nhất (ưu tiên Boss nếu có)
     local function findNearestMob()
         local nearestNormal, nearestBoss
         local minNormalDist, minBossDist = math.huge, math.huge
         local selected = settings["FarmScales"] or {}
-        local isDungeonCastleOnly = table.find(selected, "DungeonOnly") ~= nil
-        local prioritizeBoss = table.find(selected, "BossFirst") ~= nil
+        local isDungeonOnly = table.find(selected, "Dungeon + Castle") ~= nil
+        local prioritizeBoss = table.find(selected, "Đánh Boss trước") ~= nil
 
-        local function check(uuidPart, skipScaleCheck)
+        local function check(uuidPart)
             local hp = uuidPart:GetAttribute("HP")
             local scale = uuidPart:GetAttribute("Scale")
-            if not hp or hp <= 0 then return end
-            if not skipScaleCheck and not isScaleAllowed(scale) then return end
+            if not hp or hp <= 0 or not scale then return end
+            if not isScaleAllowed(scale) then return end
 
             local uuid = uuidPart.Name
             local clientModel = enemiesClient:FindFirstChild(uuid, true)
@@ -279,46 +282,41 @@ task.spawn(function()
             end
 
             local dist = (pos - rootPart.Position).Magnitude
+            local isBoss = scale >= 2
 
-            if scale and scale >= 2 then
+            if isBoss and prioritizeBoss then
                 if dist < minBossDist then
                     minBossDist = dist
                     nearestBoss = {model = clientModel, part = uuidPart}
                 end
-            else
-                if dist < minNormalDist then
-                    minNormalDist = dist
-                    nearestNormal = {model = clientModel, part = uuidPart}
-                end
+            elseif dist < minNormalDist then
+                minNormalDist = dist
+                nearestNormal = {model = clientModel, part = uuidPart}
             end
         end
 
-        -- 🧩 Quét mob trong Server
         for _, child in ipairs(enemiesServer:GetChildren()) do
-            if isDungeonCastleOnly then
+            if isDungeonOnly then
                 if child:IsA("Part") then
-                    check(child, true)
+                    check(child)
                 end
             else
                 if child:IsA("Part") then
-                    check(child, false)
+                    check(child)
                 elseif child:IsA("Folder") then
                     for _, uuidPart in ipairs(child:GetChildren()) do
                         if uuidPart:IsA("Part") then
-                            check(uuidPart, false)
+                            check(uuidPart)
                         end
                     end
                 end
             end
         end
 
-        -- ✅ Ưu tiên boss nếu có
-        if prioritizeBoss and nearestBoss then
+        if nearestBoss then
             return nearestBoss.model, nearestBoss.part
         elseif nearestNormal then
             return nearestNormal.model, nearestNormal.part
-        elseif nearestBoss then
-            return nearestBoss.model, nearestBoss.part
         else
             return nil, nil
         end
