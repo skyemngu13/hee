@@ -613,8 +613,6 @@ local function createAndStartDungeon()
                 ["DgSoloRune"] = "Solo Leveling",
                 ["DgJojoRune"] = "JoJo",
                 ["DgURankUpRune"] = "Ultimate Rank UP"
-                ["DgOPMRune"] = "OPM Rune",
-                ["DgRankDownRune"] = "Rank Down Rune"
             }
 
             local selectedRuneId
@@ -729,9 +727,7 @@ local runeDisplayNames = {
     ["DgNarutoRune"] = "Naruto",
     ["DgSoloRune"] = "Solo Leveling",
     ["DgJojoRune"] = "JoJo",
-    ["DgURankUpRune"] = "Ultimate Rank UP",
-    ["DgOPMRune"] = "OPM Rune",
-    ["DgRankDownRune"] = "Rank Down Rune"
+    ["DgURankUpRune"] = "Ultimate Rank UP"
 }
 
 local runeDropdownOptions = {}
@@ -1155,44 +1151,6 @@ MiscTab:CreateToggle({
                 pcall(function()
                     loadstring(game:HttpGet("https://raw.githubusercontent.com/skyemngu13/hee/refs/heads/main/giamlag"))()
                 end)
-            end)
-        end
-    end
-})
-
--- 🪓 Toggle không lưu settings, chỉ test
-MiscTab:CreateToggle({
-    Name = "Anti kick (test)",
-    CurrentValue = false,
-    Flag = "TempAntiPlayer",
-    Callback = function(enabled)
-        if enabled then
-            task.spawn(function()
-                local Players = game:GetService("Players")
-                local LocalPlayer = Players.LocalPlayer
-                local MainPlayers = workspace:WaitForChild("__Main"):WaitForChild("__Players")
-
-                while Rayfield.Flags["TempAntiPlayer"].CurrentValue do
-                    -- Destroy other players in Players service
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer then
-                            pcall(function()
-                                player:Destroy()
-                            end)
-                        end
-                    end
-
-                    -- Destroy player models in workspace.__Main.__Players
-                    for _, model in ipairs(MainPlayers:GetChildren()) do
-                        if model:IsA("Model") and model.Name ~= LocalPlayer.Name then
-                            pcall(function()
-                                model:Destroy()
-                            end)
-                        end
-                    end
-
-                    task.wait(1)
-                end
             end)
         end
     end
