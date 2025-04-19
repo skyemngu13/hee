@@ -1250,6 +1250,7 @@ local teleportData = {
     {Name = "Chain sawn man", Position = CFrame.new(236.932678, 33.3960934, -4301.60547)},
     {Name = "JoJo", Position = CFrame.new(4816.31641, 30.4423409, -120.22998)},
     {Name = "DB", Position = CFrame.new(-6295.89209, 24.6981049, -73.7149353, 0, 0, 1, 0, 1, -0, -1, 0, 0)},
+    {Name = "OPM", Position = CFrame.new(5994.5376, 171.666214, 4863.9458, 0.776914835, -0, -0.62960577, 0, 1, -0, 0.62960577, 0, 0.776914835)},
     {Name = "GuildHall", Position = CFrame.new(289.015015, 31.8532162, 157.246201, 1, 0, 0, 0, 1, 0, 0, 0, 1)},
 }
 
