@@ -646,7 +646,7 @@ local function createAndStartDungeon()
 
     local args3 = {
         [1] = {
-            [1] = {["Dungeon"] = 876403839, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [1] = {["Dungeon"] = 5306874659, ["Event"] = "DungeonAction", ["Action"] = "Start"},
             [2] = "\n"
         }
     }
