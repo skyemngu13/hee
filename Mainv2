@@ -1034,69 +1034,67 @@ MiscTab:CreateToggle({
 })
 
 task.spawn(function()
-    local Players = game:GetService("Players")
-    local player = Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-    local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
-    local dataRemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+	local Players = game:GetService("Players")
+	local player = Players.LocalPlayer
+	local character = player.Character or player.CharacterAdded:Wait()
+	local rootPart = character:WaitForChild("HumanoidRootPart")
+	local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
+	local dataRemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
-    -- Hàm tính khoảng cách
-    local function getDistance(part1, part2)
-        return (part1.Position - part2.Position).Magnitude
-    end
+	-- Hàm tính khoảng cách
+	local function getDistance(part1, part2)
+		return (part1.Position - part2.Position).Magnitude
+	end
 
-    while true do
-        if autoAttackEnabled then
-            local closestEnemy = nil
-            local minDistance = math.huge
+	-- Duyệt tất cả Part kẻ địch trong Server (bao gồm cả Folder)
+	local function getClosestEnemy()
+		local closest = nil
+		local minDist = math.huge
 
-            -- Tìm trong map 1–7
-            for mapId = 1, 7 do
-                local targetMap = enemies:FindFirstChild(tostring(mapId))
-                if targetMap then
-                    for _, part in pairs(targetMap:GetChildren()) do
-                        if part:IsA("Part") and part.Name ~= "" then
-                            local distance = getDistance(rootPart, part)
-                            if distance < minDistance then
-                                closestEnemy = part.Name
-                                minDistance = distance
-                            end
-                        end
-                    end
-                end
-            end
+		local function checkPart(part)
+			if part:IsA("Part") and part:GetAttribute("HP") and part:GetAttribute("HP") > 0 then
+				local dist = getDistance(rootPart, part)
+				if dist < minDist then
+					closest = part
+					minDist = dist
+				end
+			end
+		end
 
-            -- Tìm trong Server chính
-            for _, part in pairs(enemies:GetChildren()) do
-                if part:IsA("Part") and part.Name ~= "" then
-                    local distance = getDistance(rootPart, part)
-                    if distance < minDistance then
-                        closestEnemy = part.Name
-                        minDistance = distance
-                    end
-                end
-            end
+		for _, child in pairs(enemies:GetChildren()) do
+			if child:IsA("Folder") then
+				for _, part in pairs(child:GetChildren()) do
+					checkPart(part)
+				end
+			elseif child:IsA("Part") then
+				checkPart(child)
+			end
+		end
 
-            -- Tấn công nếu có kẻ địch
-            if closestEnemy then
-                local args = {
-                    [1] = {
-                        [1] = {
-                            ["Event"] = "PunchAttack",
-                            ["Enemy"] = closestEnemy
-                        },
-                        [2] = "\4"
-                    }
-                }
-                pcall(function()
-                    dataRemoteEvent:FireServer(unpack(args))
-                end)
-            end
-        end
+		return closest
+	end
 
-        task.wait(0.1)
-    end
+	while true do
+		if autoAttackEnabled then
+			local enemyPart = getClosestEnemy()
+			if enemyPart then
+				local args = {
+					[1] = {
+						[1] = {
+							["Event"] = "PunchAttack",
+							["Enemy"] = enemyPart.Name
+						},
+						[2] = "\4"
+					}
+				}
+				pcall(function()
+					dataRemoteEvent:FireServer(unpack(args))
+				end)
+			end
+		end
+
+		task.wait(0.1)
+	end
 end)
 
 MiscTab:CreateToggle({
