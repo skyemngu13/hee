@@ -752,50 +752,6 @@ task.spawn(function()
     end
 end)
 
-local runeDisplayNames = {
-    ["DgBCRune"] = "Black Clover",
-    ["DgBleachRune"] = "Bleach",
-    ["DgOPRune"] = "One Piece",
-    ["DgDbRune"] = "Dragon Ball",
-    ["DgChainsawRune"] = "Chainsaw Man",
-    ["DgNarutoRune"] = "Naruto",
-    ["DgSoloRune"] = "Solo Leveling",
-    ["DgJojoRune"] = "JoJo",
-    ["DgURankUpRune"] = "Ultimate Rank UP",
-    ["DgOPMRune"] = "OPM Rune",
-    ["DgRankDownRune"] = "Rank Down Rune"
-}
-
-local runeDropdownOptions = {}
-for id, display in pairs(runeDisplayNames) do
-    table.insert(runeDropdownOptions, display)
-end
-
--- 🔘 Toggle: Auto Add Rune
-DungeonTab:CreateToggle({
-    Name = "Auto Add Rune",
-    CurrentValue = settings["AutoAddRune"],
-    Flag = "AutoAddRune",
-    Callback = function(val)
-        settings["AutoAddRune"] = val
-        saveSettings()
-    end
-})
-
--- 🔽 Dropdown: Select Rune
-DungeonTab:CreateDropdown({
-    Name = "Select Rune",
-    Options = runeDropdownOptions,
-    CurrentOption = {settings["SelectedRuneName"] or runeDropdownOptions[1]},
-    Flag = "SelectedRuneName",
-    MultipleOptions = false,
-    Callback = function(opt)
-        local displayName = typeof(opt) == "table" and opt[1] or opt
-        settings["SelectedRuneName"] = displayName
-        saveSettings()
-    end
-})
-
 --  Textbox: Nhập số tầng hoặc thông tin tùy ý
 DungeonTab:CreateLabel("Auto castle")
 
