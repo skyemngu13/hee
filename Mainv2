@@ -88,6 +88,7 @@ local defaultSettings = {
     BossOutFloor = 0,
     AutoAddRune = false,
     SelectedRuneName = "Black Clover",
+    AutoLeaveDungeonEnd = false,
 }
 
 for key, value in pairs(defaultSettings) do
@@ -502,55 +503,38 @@ end)
 DungeonTab:CreateLabel("Auto farm Dungeon")
 
 DungeonTab:CreateToggle({
-    Name = "Dungeon + Castle farm",
-    CurrentValue = settings["OnlyCastleParts"],
-    Flag = "OnlyCastleParts",
+    Name = "Auto Dungeon(OUT)",
+    CurrentValue = settings["AutoLeaveDungeonEnd"],
+    Flag = "AutoLeaveDungeonEnd",
     Callback = function(val)
-        settings["OnlyCastleParts"] = val
+        settings["AutoLeaveDungeonEnd"] = val
         saveSettings()
     end
 })
 
+local TeleportService = game:GetService("TeleportService")
+local lobbyPlaceId = 87039211657390
+
 task.spawn(function()
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local rootPart = character:WaitForChild("HumanoidRootPart")
-
-    local enemiesServer = workspace.__Main.__Enemies:WaitForChild("Server")
-
     while true do
-        if settings["OnlyCastleParts"] then
-            local nearestPart = nil
-            local minDist = math.huge
+        -- Chỉ chạy nếu bật AutoLeaveDungeonEnd và không phải ở lobby
+        if settings["AutoLeaveDungeonEnd"] and game.PlaceId ~= lobbyPlaceId then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local gui = player:FindFirstChild("PlayerGui")
+                local hud = gui and gui:FindFirstChild("Hud")
+                local upContainer = hud and hud:FindFirstChild("UpContanier")
+                local dungeonInfo = upContainer and upContainer:FindFirstChild("DungeonInfo")
 
-            for _, obj in ipairs(enemiesServer:GetChildren()) do
-                if obj:IsA("Part") then
-                    local hp = obj:GetAttribute("HP")
-                    if hp and hp > 0 then
-                        local dist = (obj.Position - rootPart.Position).Magnitude
-                        if dist < minDist then
-                            minDist = dist
-                            nearestPart = obj
-                        end
+                if dungeonInfo and dungeonInfo:FindFirstChild("TextLabel") then
+                    local text = dungeonInfo.TextLabel.Text
+                    if string.match(text, "^Dungeon Ends in %d+s$") then
+                        TeleportService:Teleport(lobbyPlaceId)
                     end
                 end
-            end
-
-            if nearestPart then
-                local offset = (rootPart.Position - nearestPart.Position).Unit * 5 + Vector3.new(0, 3, 0)
-                rootPart.CFrame = CFrame.new(nearestPart.Position + offset, nearestPart.Position)
-
-                while settings["OnlyCastleParts"] and nearestPart:IsDescendantOf(workspace) and (nearestPart:GetAttribute("HP") or 0) > 0 do
-                    task.wait(0.1)
-                end
-
-                task.wait(settings["FarmDelay"] or 0.2)
-            else
-                task.wait(0.2)
-            end
-        else
-            task.wait(0.5)
+            end)
         end
+        task.wait(1)
     end
 end)
 
@@ -597,7 +581,7 @@ local function createAndStartDungeon()
         }
     }
     bridge:FireServer(unpack(args1))
-    task.wait(1)
+    task.wait(1.5)
 
     -- Tạo dungeon
     local args2 = {
@@ -655,7 +639,7 @@ local function createAndStartDungeon()
     end
 
     -- ⏳ Bắt đầu dungeon sau 0.5s
-    task.wait(0.5)
+    task.wait(1)
 
     local args3 = {
         [1] = {
@@ -702,7 +686,7 @@ task.spawn(function()
         else
             if game.PlaceId == 87039211657390 then
                 if settings["AutoBypassDungeon"] then
-                    task.wait(3)
+                    task.wait(1)
                     createAndStartDungeon()
                 end
             else
