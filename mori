@@ -555,7 +555,6 @@ task.spawn(function()
 end)
 
 -- 🛡Auto Bypass Dungeon Toggle 
--- 🔘 Auto Bypass & Auto Check DD
 DungeonTab:CreateToggle({
     Name = "Auto Bypass Dungeon",
     CurrentValue = settings["AutoBypassDungeon"],
@@ -566,6 +565,7 @@ DungeonTab:CreateToggle({
     end
 })
 
+-- uto Check DD Toggle (ở dưới)
 DungeonTab:CreateToggle({
     Name = "Auto Check DD (fix)",
     CurrentValue = settings["AutoCheckDD"],
@@ -573,79 +573,50 @@ DungeonTab:CreateToggle({
     Callback = function(val)
         settings["AutoCheckDD"] = val
         saveSettings()
-    end
+        end
 })
 
--- 📦 Rune name list
-local runeDisplayNames = {
-    ["DgBCRune"] = "Black Clover",
-    ["DgBleachRune"] = "Bleach",
-    ["DgOPRune"] = "One Piece",
-    ["DgDbRune"] = "Dragon Ball",
-    ["DgChainsawRune"] = "Chainsaw Man",
-    ["DgNarutoRune"] = "Naruto",
-    ["DgSoloRune"] = "Solo Leveling",
-    ["DgJojoRune"] = "JoJo",
-    ["DgURankUpRune"] = "Ultimate Rank UP",
-    ["DgOPMRune"] = "OPM Rune",
-    ["DgRankDownRune"] = "Rank Down Rune"
-}
-
-local runeDropdownOptions = {}
-for _, display in pairs(runeDisplayNames) do
-    table.insert(runeDropdownOptions, display)
-end
-
-DungeonTab:CreateToggle({
-    Name = "Auto Add Rune",
-    CurrentValue = settings["AutoAddRune"],
-    Flag = "AutoAddRune",
-    Callback = function(val)
-        settings["AutoAddRune"] = val
-        saveSettings()
-    end
-})
-
-DungeonTab:CreateDropdown({
-    Name = "Select Rune",
-    Options = runeDropdownOptions,
-    CurrentOption = {settings["SelectedRuneName"] or runeDropdownOptions[1]},
-    Flag = "SelectedRuneName",
-    MultipleOptions = false,
-    Callback = function(opt)
-        local displayName = typeof(opt) == "table" and opt[1] or opt
-        settings["SelectedRuneName"] = displayName
-        saveSettings()
-    end
-})
-
--- ⚙️ Create Dungeon with bypass rune (Client-side + DungeonId fix)
+--  Hàm tạo Dungeon
 local function createAndStartDungeon()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local bridgeMod = require(ReplicatedStorage:WaitForChild("BridgeNet2"))
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
-    local general = bridgeMod.ReferenceBridge("GENERAL_EVENT")
 
     -- Mua vé
-    bridge:FireServer({
+    local args1 = {
         [1] = {
             [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
             [2] = "\n"
         }
-    })
+    }
+    bridge:FireServer(unpack(args1))
     wait(1)
 
-    -- Tạo dungeon với DungeonId bạn yêu cầu
-    bridge:FireServer({
+    -- Tạo dungeon
+    local args2 = {
         [1] = {
             [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
             [2] = "\n"
         }
-    })
+    }
+    bridge:FireServer(unpack(args2))
 
-    -- ⚡️ Auto Add Rune giả lập (không mất)
+    -- ⚡️ Auto Add Rune nếu bật
     if settings["AutoAddRune"] and settings["SelectedRuneName"] then
         task.delay(0.5, function()
+            local runeDisplayNames = {
+                ["DgBCRune"] = "Black Clover",
+                ["DgBleachRune"] = "Bleach",
+                ["DgOPRune"] = "One Piece",
+                ["DgDbRune"] = "Dragon Ball",
+                ["DgChainsawRune"] = "Chainsaw Man",
+                ["DgNarutoRune"] = "Naruto",
+                ["DgSoloRune"] = "Solo Leveling",
+                ["DgJojoRune"] = "JoJo",
+                ["DgURankUpRune"] = "Ultimate Rank UP",
+                ["DgOPMRune"] = "OPM Rune",
+                ["DgRankDownRune"] = "Rank Down Rune"
+            }
+
             local selectedRuneId
             for id, display in pairs(runeDisplayNames) do
                 if display == settings["SelectedRuneName"] then
@@ -653,46 +624,38 @@ local function createAndStartDungeon()
                     break
                 end
             end
+
             if selectedRuneId then
-                general:Fire({
-                    Event = "Inventory",
-                    Action = "AddItems",
-                    Item = selectedRuneId,
-                    Folder = {
-                        GetAttribute = function(attr)
-                            if attr == "Amount" then return 1 end
-                        end
+                local addArgs = {
+                    [1] = {
+                        [1] = {
+                            ["Dungeon"] = 5306874659,
+                            ["Action"] = "AddItems",
+                            ["Slot"] = 1,
+                            ["Event"] = "DungeonAction",
+                            ["Item"] = selectedRuneId
+                        },
+                        [2] = "\n"
                     }
-                })
+                }
+                bridge:FireServer(unpack(addArgs))
             end
         end)
     end
 
-    -- Bắt đầu dungeon với rune giả lập nếu có
+    -- Bắt đầu dungeon sau 0.5s (tùy bạn có delay hay không)
     wait(0.5)
 
-    local selectedRuneId = nil
-    for id, name in pairs(runeDisplayNames) do
-        if name == settings["SelectedRuneName"] then
-            selectedRuneId = id
-            break
-        end
-    end
-
-    bridge:FireServer({
+    local args3 = {
         [1] = {
-            [1] = {
-                ["Dungeon"] = 5306874659,
-                ["Event"] = "DungeonAction",
-                ["Action"] = "Start",
-                ["Runes"] = selectedRuneId and {selectedRuneId} or nil
-            },
+            [1] = {["Dungeon"] = 0, ["Event"] = "DungeonAction", ["Action"] = "Start"},
             [2] = "\n"
         }
-    })
+    }
+    bridge:FireServer(unpack(args3))
 end
 
--- 🔁 Auto xử lý Dungeon logic (Check DD + Auto Start)
+--  Luồng xử lý Auto Dungeon (cho cả hai toggle)
 task.spawn(function()
     local lastText = ""
     local waitFor12s = false
@@ -717,11 +680,13 @@ task.spawn(function()
                     local textLabel = dungeonInfo:FindFirstChild("TextLabel")
                     local currentText = textLabel and textLabel.Text or ""
 
+                    -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
                     if currentText == "Dungeon Ends in 20s" then
                         isDoubleDungeonCheck = true
                         waitFor12s = false
                     end
 
+                    -- 🧠 Auto Check DD logic
                     if settings["AutoCheckDD"] and isDoubleDungeonCheck then
                         if currentText == "Dungeon Ends in 13s" then
                             waitFor12s = true
@@ -729,15 +694,17 @@ task.spawn(function()
                             createAndStartDungeon()
                             waitFor12s = false
                             isDoubleDungeonCheck = false
-                            hasDoubleDungeonHappened = true
+                            hasDoubleDungeonHappened = true -- đã có double dungeon
                         elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
                             waitFor12s = false
                         end
                     end
 
+                    -- 🛡️ Auto Bypass Dungeon logic
                     if settings["AutoBypassDungeon"] then
+                        -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
                         if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
-                            if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
+                            if currentText:match("^Dungeon Ends in %\d+s$") and currentText ~= lastText then
                                 createAndStartDungeon()
                                 hasDoubleDungeonHappened = false
                             end
@@ -747,10 +714,56 @@ task.spawn(function()
                     lastText = currentText
                 end
             end
+
             task.wait(0.3)
         end
     end
 end)
+
+local runeDisplayNames = {
+    ["DgBCRune"] = "Black Clover",
+    ["DgBleachRune"] = "Bleach",
+    ["DgOPRune"] = "One Piece",
+    ["DgDbRune"] = "Dragon Ball",
+    ["DgChainsawRune"] = "Chainsaw Man",
+    ["DgNarutoRune"] = "Naruto",
+    ["DgSoloRune"] = "Solo Leveling",
+    ["DgJojoRune"] = "JoJo",
+    ["DgURankUpRune"] = "Ultimate Rank UP",
+    ["DgOPMRune"] = "OPM Rune",
+    ["DgRankDownRune"] = "Rank Down Rune"
+}
+
+local runeDropdownOptions = {}
+for id, display in pairs(runeDisplayNames) do
+    table.insert(runeDropdownOptions, display)
+end
+
+-- 🔘 Toggle: Auto Add Rune
+DungeonTab:CreateToggle({
+    Name = "Auto Add Rune",
+    CurrentValue = settings["AutoAddRune"],
+    Flag = "AutoAddRune",
+    Callback = function(val)
+        settings["AutoAddRune"] = val
+        saveSettings()
+    end
+})
+
+-- 🔽 Dropdown: Select Rune
+DungeonTab:CreateDropdown({
+    Name = "Select Rune",
+    Options = runeDropdownOptions,
+    CurrentOption = {settings["SelectedRuneName"] or runeDropdownOptions[1]},
+    Flag = "SelectedRuneName",
+    MultipleOptions = false,
+    Callback = function(opt)
+        local displayName = typeof(opt) == "table" and opt[1] or opt
+        settings["SelectedRuneName"] = displayName
+        saveSettings()
+    end
+})
+
 
 --  Textbox: Nhập số tầng hoặc thông tin tùy ý
 DungeonTab:CreateLabel("Auto castle")
