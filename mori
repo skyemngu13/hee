@@ -1073,7 +1073,7 @@ task.spawn(function()
 				if target ~= lastTarget then
 					lastTarget = target
 					lastTargetTime = tick()
-					task.wait(0.1) -- chờ vị trí ổn định sau TP
+					task.wait(0.01) -- chờ vị trí ổn định sau TP
 				end
 
 				-- Nếu vẫn trong phạm vi sau delay → tấn công
