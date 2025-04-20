@@ -597,7 +597,7 @@ local function createAndStartDungeon()
         }
     }
     bridge:FireServer(unpack(args1))
-    wait(1)
+    task.wait(1)
 
     -- Tạo dungeon
     local args2 = {
@@ -655,7 +655,7 @@ local function createAndStartDungeon()
     end
 
     -- Bắt đầu dungeon sau 0.5s
-    wait(0.5)
+    task.wait(0.5)
 
     local args3 = {
         [1] = {
@@ -670,19 +670,19 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args3))
 
     -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới
-    wait(0.7)
-
-    local leaveArgs = {
-        [1] = {
+    task.delay(0.5, function()
+        local leaveArgs = {
             [1] = {
-                ["Dungeon"] = idPlayer,
-                ["Event"] = "DungeonAction",
-                ["Action"] = "Leave"
-            },
-            [2] = "\n"
+                [1] = {
+                    ["Dungeon"] = idPlayer,
+                    ["Event"] = "DungeonAction",
+                    ["Action"] = "Leave"
+                },
+                [2] = "\n"
+            }
         }
-    }
-    bridge:FireServer(unpack(leaveArgs))
+        bridge:FireServer(unpack(leaveArgs))
+    end)
 end
 
 --  Luồng xử lý Auto Dungeon (cho cả hai toggle)
