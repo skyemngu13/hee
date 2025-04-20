@@ -503,7 +503,7 @@ end)
 DungeonTab:CreateLabel("Auto farm Dungeon")
 
 DungeonTab:CreateToggle({
-    Name = "Auto Dungeon(OUT)",
+    Name = "Auto out dungeon",
     CurrentValue = settings["AutoLeaveDungeonEnd"],
     Flag = "AutoLeaveDungeonEnd",
     Callback = function(val)
