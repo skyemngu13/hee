@@ -629,7 +629,6 @@ local function createAndStartDungeon()
                 local addArgs = {
                     [1] = {
                         [1] = {
-                            ["Dungeon"] = 5306874659,
                             ["Action"] = "AddItems",
                             ["Slot"] = 1,
                             ["Event"] = "DungeonAction",
