@@ -792,7 +792,7 @@ local castleJoinToggle = DungeonTab:CreateToggle({
                     if minute >= 45 and minute <= 58 then
                         local args = {
                             [1] = {
-                                [1] = { ["Event"] = "JoinCastle" },
+                                [1] = { ["Event"] = "CastleAction" },
                                 [2] = "\n"
                             }
                         }
@@ -839,8 +839,9 @@ local castleCheckpointToggle = DungeonTab:CreateToggle({
                         local args = {
                             [1] = {
                                 [1] = {
-                                    ["Event"] = "JoinCastle",
-                                    ["Check"] = true
+                                    ["Check"] = true,
+                                    ["Event"] = "CastleAction",
+                                    ["Action"] = "Join"
                                 },
                                 [2] = "\n"
                             }
