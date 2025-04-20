@@ -639,7 +639,7 @@ local function createAndStartDungeon()
     end
 
     -- ⏳ Bắt đầu dungeon sau 0.5s
-    task.wait(1)
+    task.wait(2)
 
     local args3 = {
         [1] = {
