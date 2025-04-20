@@ -1040,7 +1040,9 @@ task.spawn(function()
 	local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 	local dataRemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
-	local attackRange = 8 -- tối đa bao nhiêu stud thì cho đánh
+	local lastTarget = nil
+	local lastTargetTime = 0
+	local attackRange = 8
 
 	local function getClosestEnemyInRange()
 		local closest = nil
@@ -1067,21 +1069,33 @@ task.spawn(function()
 			local target = getClosestEnemyInRange()
 
 			if target then
-				local args = {
-					[1] = {
+				-- Nếu là target mới → delay nhẹ trước khi đánh
+				if target ~= lastTarget then
+					lastTarget = target
+					lastTargetTime = tick()
+					task.wait(0.1) -- chờ vị trí ổn định sau TP
+				end
+
+				-- Nếu vẫn trong phạm vi sau delay → tấn công
+				if (target.Position - rootPart.Position).Magnitude <= attackRange then
+					local args = {
 						[1] = {
-							["Event"] = "PunchAttack",
-							["Enemy"] = target.Name
-						},
-						[2] = "\4"
+							[1] = {
+								["Event"] = "PunchAttack",
+								["Enemy"] = target.Name
+							},
+							[2] = "\4"
+						}
 					}
-				}
-				pcall(function()
-					dataRemoteEvent:FireServer(unpack(args))
-				end)
+					pcall(function()
+						dataRemoteEvent:FireServer(unpack(args))
+					end)
+				end
+			else
+				lastTarget = nil
 			end
 		end
-		task.wait(0.1) -- đủ nhanh để phản hồi liền sau khi TP
+		task.wait(0.1)
 	end
 end)
 
