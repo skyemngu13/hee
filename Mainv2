@@ -654,7 +654,7 @@ local function createAndStartDungeon()
         end)
     end
 
-    -- Bắt đầu dungeon sau 0.5s
+    -- ⏳ Bắt đầu dungeon sau 0.5s
     task.wait(0.5)
 
     local args3 = {
@@ -669,8 +669,9 @@ local function createAndStartDungeon()
     }
     bridge:FireServer(unpack(args3))
 
-    -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới
-    task.delay(0.5, function()
+    -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới (spam 3 lần)
+    task.spawn(function()
+        task.wait(0.5)
         local leaveArgs = {
             [1] = {
                 [1] = {
@@ -681,7 +682,10 @@ local function createAndStartDungeon()
                 [2] = "\n"
             }
         }
-        bridge:FireServer(unpack(leaveArgs))
+        for i = 1, 3 do
+            bridge:FireServer(unpack(leaveArgs))
+            task.wait(0.3)
+        end
     end)
 end
 
