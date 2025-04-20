@@ -579,7 +579,11 @@ DungeonTab:CreateToggle({
 --  Hàm tạo Dungeon
 local function createAndStartDungeon()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Players = game:GetService("Players")
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- 🔢 Lấy ID người chơi hiện tại
+    local idPlayer = Players.LocalPlayer.UserId
 
     -- Mua vé
     local args1 = {
@@ -629,6 +633,7 @@ local function createAndStartDungeon()
                 local addArgs = {
                     [1] = {
                         [1] = {
+                            ["Dungeon"] = idPlayer,
                             ["Action"] = "AddItems",
                             ["Slot"] = 1,
                             ["Event"] = "DungeonAction",
@@ -647,7 +652,11 @@ local function createAndStartDungeon()
 
     local args3 = {
         [1] = {
-            [1] = {["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [1] = {
+                ["Dungeon"] = idPlayer,
+                ["Event"] = "DungeonAction",
+                ["Action"] = "Start"
+            },
             [2] = "\n"
         }
     }
