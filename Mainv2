@@ -633,7 +633,7 @@ local function createAndStartDungeon()
                 local addArgs = {
                     [1] = {
                         [1] = {
-                            ["Dungeon"] = 306032382,
+                            ["Dungeon"] = idPlayer,
                             ["Action"] = "AddItems",
                             ["Slot"] = 1,
                             ["Event"] = "DungeonAction",
