@@ -655,7 +655,7 @@ local function createAndStartDungeon()
 
     -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới (spam 3 lần)
     task.spawn(function()
-        task.wait(0.5)
+        task.wait(0.2)
         local leaveArgs = {
             [1] = {
                 [1] = {
