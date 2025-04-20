@@ -579,80 +579,116 @@ DungeonTab:CreateToggle({
 --  Hàm tạo Dungeon
 local function createAndStartDungeon()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Players = game:GetService("Players")
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+    local player = Players.LocalPlayer
 
     -- Mua vé
-    local args1 = {
-        [1] = {
-            [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
-            [2] = "\n"
-        }
-    }
-    bridge:FireServer(unpack(args1))
-    wait(1)
+    bridge:FireServer({
+        {
+            Type = "Gems",
+            Event = "DungeonAction",
+            Action = "BuyTicket"
+        },
+        "\n"
+    })
+
+    task.wait(1)
 
     -- Tạo dungeon
-    local args2 = {
-        [1] = {
-            [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
-            [2] = "\n"
-        }
-    }
-    bridge:FireServer(unpack(args2))
+    bridge:FireServer({
+        {
+            Event = "DungeonAction",
+            Action = "Create"
+        },
+        "\n"
+    })
 
     -- ⚡️ Auto Add Rune nếu bật
-    if settings["AutoAddRune"] and settings["SelectedRuneName"] then
-        task.delay(0.5, function()
-            local runeDisplayNames = {
-                ["DgBCRune"] = "Black Clover",
-                ["DgBleachRune"] = "Bleach",
-                ["DgOPRune"] = "One Piece",
-                ["DgDbRune"] = "Dragon Ball",
-                ["DgChainsawRune"] = "Chainsaw Man",
-                ["DgNarutoRune"] = "Naruto",
-                ["DgSoloRune"] = "Solo Leveling",
-                ["DgJojoRune"] = "JoJo",
-                ["DgURankUpRune"] = "Ultimate Rank UP",
-                ["DgOPMRune"] = "OPM Rune",
-                ["DgRankDownRune"] = "Rank Down Rune"
-            }
+    if settings.AutoAddRune and settings.SelectedRuneName then
+        local runeMap = {
+            ["Black Clover"] = "DgBCRune",
+            ["Bleach"] = "DgBleachRune",
+            ["One Piece"] = "DgOPRune",
+            ["Dragon Ball"] = "DgDbRune",
+            ["Chainsaw Man"] = "DgChainsawRune",
+            ["Naruto"] = "DgNarutoRune",
+            ["Solo Leveling"] = "DgSoloRune",
+            ["JoJo"] = "DgJojoRune",
+            ["Ultimate Rank UP"] = "DgURankUpRune",
+            ["OPM Rune"] = "DgOPMRune",
+            ["Rank Down Rune"] = "DgRankDownRune"
+        }
 
-            local selectedRuneId
-            for id, display in pairs(runeDisplayNames) do
-                if display == settings["SelectedRuneName"] then
-                    selectedRuneId = id
-                    break
-                end
+        local selectedRuneId = runeMap[settings.SelectedRuneName]
+
+        if selectedRuneId then
+            -- Hook để ngăn rune bị trừ
+            local function protectRune(runeName)
+                local inv = player:WaitForChild("leaderstats"):WaitForChild("Inventory"):WaitForChild("Items")
+                local rune = inv:FindFirstChild(runeName)
+                if not rune then return end
+
+                -- Clone dự phòng
+                local clone = rune:Clone()
+                rune.Destroying:Connect(function()
+                    clone.Parent = inv
+                end)
+
+                -- Hook SetAttribute để chặn giảm Amount
+                local mt = getrawmetatable(game)
+                setreadonly(mt, false)
+
+                local old = mt.__namecall
+                mt.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    local args = {...}
+
+                    if tostring(self) == runeName and method == "SetAttribute" and args[1] == "Amount" then
+                        if args[2] < self:GetAttribute("Amount") then
+                            warn("[RuneFake] Blocked amount reduction for", runeName)
+                            return
+                        end
+                    end
+                    return old(self, ...)
+                end)
             end
 
-            if selectedRuneId then
-                local addArgs = {
-                    [1] = {
-                        [1] = {
-                            ["Dungeon"] = 5306874659,
-                            ["Action"] = "AddItems",
-                            ["Slot"] = 1,
-                            ["Event"] = "DungeonAction",
-                            ["Item"] = selectedRuneId
-                        },
-                        [2] = "\n"
-                    }
-                }
-                bridge:FireServer(unpack(addArgs))
+            protectRune(selectedRuneId)
+
+            -- Gửi fake add rune
+            bridge:FireServer({
+                {
+                    Dungeon = 5306874659,
+                    Action = "AddItems",
+                    Slot = 1,
+                    Event = "DungeonAction",
+                    Item = selectedRuneId
+                },
+                "\n"
+            })
+
+            -- Optional: Fake GUI
+            if settings.FakeRuneGUI then
+                local fakeRuneCount = settings.FakeRuneAmount or 999999
+                local gui = player.PlayerGui:WaitForChild("Hud"):WaitForChild("BottomContainer"):WaitForChild("Runes")
+                gui.Text = tostring(fakeRuneCount)
             end
-        end)
+        else
+            warn("[⚠️] Rune không hợp lệ: " .. settings.SelectedRuneName)
+        end
     end
 
-    -- Bắt đầu dungeon sau 0.5s (tùy bạn có delay hay không)
-    wait(0.5)
-
-    local args3 = {
-        [1] = {
-            [1] = {["Dungeon"] = 5306874659, ["Event"] = "DungeonAction", ["Action"] = "Start"},
-            [2] = "\n"
-        }
-    }
-    bridge:FireServer(unpack(args3))
+    -- Bắt đầu dungeon
+    task.wait(0.5)
+    bridge:FireServer({
+        {
+            Dungeon = 5306874659,
+            Event = "DungeonAction",
+            Action = "Start"
+        },
+        "\n"
+    })
 end
 
 --  Luồng xử lý Auto Dungeon (cho cả hai toggle)
