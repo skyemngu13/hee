@@ -580,8 +580,6 @@ DungeonTab:CreateToggle({
 local function createAndStartDungeon()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
-    local dungeonId = 5306874659
-    local fakeOwnerId = 7157493020 -- ID giả để tránh bị trừ rune
 
     -- Mua vé
     local args1 = {
@@ -628,11 +626,10 @@ local function createAndStartDungeon()
             end
 
             if selectedRuneId then
-                -- Add rune
                 local addArgs = {
                     [1] = {
                         [1] = {
-                            ["Dungeon"] = dungeonId,
+                            ["Dungeon"] = 5306874659,
                             ["Action"] = "AddItems",
                             ["Slot"] = 1,
                             ["Event"] = "DungeonAction",
@@ -642,29 +639,16 @@ local function createAndStartDungeon()
                     }
                 }
                 bridge:FireServer(unpack(addArgs))
-
-                -- 🧠 Fake ItemsInfo: set attribute thành fakeOwnerId
-                task.delay(0.25, function()
-                    local dungeonFolder = ReplicatedStorage:FindFirstChild("_Infos")
-                    if dungeonFolder then
-                        local dungeonInstance = dungeonFolder:FindFirstChild("__Dungeons")
-                        if dungeonInstance then
-                            local thisDungeon = dungeonInstance:FindFirstChild(tostring(dungeonId))
-                            if thisDungeon and thisDungeon:FindFirstChild("ItemsInfo") then
-                                thisDungeon.ItemsInfo:SetAttribute("1", fakeOwnerId)
-                            end
-                        end
-                    end
-                end)
             end
         end)
     end
 
-    -- Bắt đầu dungeon sau 0.5s
+    -- Bắt đầu dungeon sau 0.5s (tùy bạn có delay hay không)
     wait(0.5)
+
     local args3 = {
         [1] = {
-            [1] = {["Dungeon"] = dungeonId, ["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [1] = {["Dungeon"] = 5306874659, ["Event"] = "DungeonAction", ["Action"] = "Start"},
             [2] = "\n"
         }
     }
