@@ -383,7 +383,7 @@ local autoDestroy = settings["AutoDestroy"]
 local selectedModels = settings["AriseModels"]
 
 --  Danh sách tất cả model có thể chọn
-local allModels = {"JinWoo", "Pucci", "Metus", "Freeza", "Esil", "Baran", "Vulcan"}  -- bạn có thể thêm tùy ý
+local allModels = {"JinWoo", "Pucci", "Metus", "Saitama", "Esil", "Baran", "Vulcan", "Kamish"}  -- bạn có thể thêm tùy ý
 
 -- 🗡 Toggle: Auto Destroy
 MainTab:CreateToggle({
@@ -399,7 +399,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateDropdown({
 	Name = " Chọn Model để Arise",
-	Options = {"JinWoo", "Pucci", "Metus", "Freeza", "Esil", "Baran", "Vulcan"},
+	Options = {"JinWoo", "Pucci", "Metus", "Saitama", "Esil", "Baran", "Vulcan", "Kamish"},
 	CurrentOption = settings["AriseModels"] or {},
 	MultipleOptions = true, -- Bật multi-select
 	Flag = "AriseModels",
@@ -579,22 +579,33 @@ DungeonTab:CreateToggle({
 --  Hàm tạo Dungeon
 local function createAndStartDungeon()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Players = game:GetService("Players")
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- 🔢 Lấy ID người chơi hiện tại
+    local idPlayer = Players.LocalPlayer.UserId
 
     -- Mua vé
     local args1 = {
         [1] = {
-            [1] = {["Type"] = "Gems", ["Event"] = "DungeonAction", ["Action"] = "BuyTicket"},
+            [1] = {
+                ["Type"] = "Gems",
+                ["Event"] = "DungeonAction",
+                ["Action"] = "BuyTicket"
+            },
             [2] = "\n"
         }
     }
     bridge:FireServer(unpack(args1))
-    wait(1)
+    task.wait(1)
 
     -- Tạo dungeon
     local args2 = {
         [1] = {
-            [1] = {["Event"] = "DungeonAction", ["Action"] = "Create"},
+            [1] = {
+                ["Event"] = "DungeonAction",
+                ["Action"] = "Create"
+            },
             [2] = "\n"
         }
     }
@@ -629,6 +640,7 @@ local function createAndStartDungeon()
                 local addArgs = {
                     [1] = {
                         [1] = {
+                            ["Dungeon"] = idPlayer,
                             ["Action"] = "AddItems",
                             ["Slot"] = 1,
                             ["Event"] = "DungeonAction",
@@ -642,16 +654,35 @@ local function createAndStartDungeon()
         end)
     end
 
-    -- Bắt đầu dungeon sau 0.5s (tùy bạn có delay hay không)
-    wait(0.5)
+    -- Bắt đầu dungeon sau 0.5s
+    task.wait(0.5)
 
     local args3 = {
         [1] = {
-            [1] = {["Event"] = "DungeonAction", ["Action"] = "Start"},
+            [1] = {
+                ["Dungeon"] = idPlayer,
+                ["Event"] = "DungeonAction",
+                ["Action"] = "Start"
+            },
             [2] = "\n"
         }
     }
     bridge:FireServer(unpack(args3))
+
+    -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới
+    task.delay(0.5, function()
+        local leaveArgs = {
+            [1] = {
+                [1] = {
+                    ["Dungeon"] = idPlayer,
+                    ["Event"] = "DungeonAction",
+                    ["Action"] = "Leave"
+                },
+                [2] = "\n"
+            }
+        }
+        bridge:FireServer(unpack(leaveArgs))
+    end)
 end
 
 --  Luồng xử lý Auto Dungeon (cho cả hai toggle)
@@ -792,7 +823,7 @@ local castleJoinToggle = DungeonTab:CreateToggle({
                     if minute >= 45 and minute <= 58 then
                         local args = {
                             [1] = {
-                                [1] = { ["Event"] = "JoinCastle" },
+                                [1] = { ["Event"] = "CastleAction" },
                                 [2] = "\n"
                             }
                         }
@@ -839,8 +870,9 @@ local castleCheckpointToggle = DungeonTab:CreateToggle({
                         local args = {
                             [1] = {
                                 [1] = {
-                                    ["Event"] = "JoinCastle",
-                                    ["Check"] = true
+                                    ["Check"] = true,
+                                    ["Event"] = "CastleAction",
+                                    ["Action"] = "Join"
                                 },
                                 [2] = "\n"
                             }
