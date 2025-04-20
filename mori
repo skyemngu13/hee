@@ -1040,24 +1040,20 @@ task.spawn(function()
 	local enemies = workspace:WaitForChild("__Main"):WaitForChild("__Enemies"):WaitForChild("Server")
 	local dataRemoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
-	local currentTarget = nil
+	local attackRange = 8 -- tối đa bao nhiêu stud thì cho đánh
 
-	local function getDistance(part1, part2)
-		return (part1.Position - part2.Position).Magnitude
-	end
-
-	local function getClosestEnemy()
+	local function getClosestEnemyInRange()
 		local closest = nil
 		local minDist = math.huge
 
-		for _, child in pairs(enemies:GetDescendants()) do
-			if child:IsA("Part") then
-				local hp = child:GetAttribute("HP")
+		for _, part in pairs(enemies:GetDescendants()) do
+			if part:IsA("Part") then
+				local hp = part:GetAttribute("HP")
 				if hp and hp > 0 then
-					local dist = getDistance(rootPart, child)
-					if dist < minDist then
-						closest = child
+					local dist = (part.Position - rootPart.Position).Magnitude
+					if dist < minDist and dist <= attackRange then
 						minDist = dist
+						closest = part
 					end
 				end
 			end
@@ -1068,17 +1064,14 @@ task.spawn(function()
 
 	while true do
 		if autoAttackEnabled then
-			-- Nếu không có target hoặc target đã chết thì tìm mới
-			if not currentTarget or not currentTarget:IsDescendantOf(workspace) or (currentTarget:GetAttribute("HP") or 0) <= 0 then
-				currentTarget = getClosestEnemy()
-			end
+			local target = getClosestEnemyInRange()
 
-			if currentTarget then
+			if target then
 				local args = {
 					[1] = {
 						[1] = {
 							["Event"] = "PunchAttack",
-							["Enemy"] = currentTarget.Name
+							["Enemy"] = target.Name
 						},
 						[2] = "\4"
 					}
@@ -1087,12 +1080,8 @@ task.spawn(function()
 					dataRemoteEvent:FireServer(unpack(args))
 				end)
 			end
-
-			task.wait(0.1) -- Delay giữa các đòn đánh
-		else
-			currentTarget = nil
-			task.wait(0.2)
 		end
+		task.wait(0.1) -- đủ nhanh để phản hồi liền sau khi TP
 	end
 end)
 
