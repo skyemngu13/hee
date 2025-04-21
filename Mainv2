@@ -686,7 +686,7 @@ task.spawn(function()
         else
             if game.PlaceId == 87039211657390 then
                 if settings["AutoBypassDungeon"] then
-                    task.wait(1)
+                    task.wait(0.5)
                     createAndStartDungeon()
                 end
             else
