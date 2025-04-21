@@ -596,55 +596,55 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args2))
 
     -- ⚡️ Auto Add Rune nếu bật
-    if settings["AutoAddRune"] then
-        task.delay(0.5, function()
-            local runeDisplayNames = {
-                ["DgBCRune"] = "Black Clover",
-                ["DgBleachRune"] = "Bleach",
-                ["DgOPRune"] = "One Piece",
-                ["DgDbRune"] = "Dragon Ball",
-                ["DgChainsawRune"] = "Chainsaw Man",
-                ["DgNarutoRune"] = "Naruto",
-                ["DgSoloRune"] = "Solo Leveling",
-                ["DgJojoRune"] = "JoJo",
-                ["DgOPMRune"] = "OPM Rune",
-                ["DgURankUpRune"] = "Ultimate Rank UP",
-                ["DgRankDownRune"] = "Rank Down Rune",
-                ["DgHealthRune"] = "Heal Rune",
-                ["DgRankUpRune"] = "Rank Up Rune",
-                ["DgRoomRune"] = "- Room Rune",
-                ["DgTimeRune"] = "Time Rune",
-                ["DgMoreRoomRune"] = "More Room Rune"
-            }
+    -- ⚡️ Auto Add Rune nếu bật
+if settings["AutoAddRune"] then
+    local runeDisplayNames = {
+        ["DgBCRune"] = "Black Clover",
+        ["DgBleachRune"] = "Bleach",
+        ["DgOPRune"] = "One Piece",
+        ["DgDbRune"] = "Dragon Ball",
+        ["DgChainsawRune"] = "Chainsaw Man",
+        ["DgNarutoRune"] = "Naruto",
+        ["DgSoloRune"] = "Solo Leveling",
+        ["DgJojoRune"] = "JoJo",
+        ["DgOPMRune"] = "OPM Rune",
+        ["DgURankUpRune"] = "Ultimate Rank UP",
+        ["DgRankDownRune"] = "Rank Down Rune",
+        ["DgHealthRune"] = "Heal Rune",
+        ["DgRankUpRune"] = "Rank Up Rune",
+        ["DgRoomRune"] = "- Room Rune",
+        ["DgTimeRune"] = "Time Rune",
+        ["DgMoreRoomRune"] = "More Room Rune"
+    }
 
-            for slot = 1, 5 do
-                local selectedName = settings["SelectedRuneSlot" .. slot]
-                if selectedName and selectedName ~= "None" then
-                    for id, name in pairs(runeDisplayNames) do
-                        if name == selectedName then
-                            local addArgs = {
-                                [1] = {
-                                    [1] = {
-                                        ["Dungeon"] = idPlayer,
-                                        ["Action"] = "AddItems",
-                                        ["Slot"] = slot,
-                                        ["Event"] = "DungeonAction",
-                                        ["Item"] = id
-                                    },
-                                    [2] = "\n"
-                                }
-                            }
-                            bridge:FireServer(unpack(addArgs))
-                            break
-                        end
-                    end
+    for slot = 1, 5 do
+        local selectedName = settings["SelectedRuneSlot" .. slot]
+        if selectedName and selectedName ~= "None" then
+            for id, name in pairs(runeDisplayNames) do
+                if name == selectedName then
+                    local addArgs = {
+                        [1] = {
+                            [1] = {
+                                ["Dungeon"] = idPlayer,
+                                ["Action"] = "AddItems",
+                                ["Slot"] = slot,
+                                ["Event"] = "DungeonAction",
+                                ["Item"] = id
+                            },
+                            [2] = "\n"
+                        }
+                    }
+                    bridge:FireServer(unpack(addArgs))
+                    task.wait(0.3) -- ✅ Thêm delay giữa các AddItems để đảm bảo server nhận đầy đủ
+                    break
                 end
             end
-        end)
+        end
     end
+end
 
     -- ⏳ Bắt đầu dungeon sau 0.5s
-    task.wait(1)
+    task.wait(0.5)
 
     local args3 = {
         [1] = {
