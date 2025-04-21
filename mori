@@ -579,7 +579,7 @@ local function createAndStartDungeon()
             [2] = "\n"
         }
     })
-    task.wait(1.2)
+    task.wait(1)
 
     -- 🏰 Tạo dungeon
     bridge:FireServer({
@@ -618,29 +618,28 @@ local function createAndStartDungeon()
             if selectedName and selectedName ~= "None" then
                 for id, name in pairs(runeDisplayNames) do
                     if name == selectedName then
-                        task.spawn(function()
-                            bridge:FireServer({
+                        bridge:FireServer({
+                            [1] = {
                                 [1] = {
-                                    [1] = {
-                                        ["Dungeon"] = idPlayer,
-                                        ["Action"] = "AddItems",
-                                        ["Slot"] = slot,
-                                        ["Event"] = "DungeonAction",
-                                        ["Item"] = id
-                                    },
-                                    [2] = "\n"
-                                }
-                            })
-                        end)
+                                    ["Dungeon"] = idPlayer,
+                                    ["Action"] = "AddItems",
+                                    ["Slot"] = slot,
+                                    ["Event"] = "DungeonAction",
+                                    ["Item"] = id
+                                },
+                                [2] = "\n"
+                            }
+                        })
+                        task.wait(0.1)
                         break
                     end
                 end
             end
         end
-    end
+    end -- <<<< Bạn thiếu dấu `end` này
 
     -- ▶️ Bắt đầu dungeon sau delay nhẹ
-    task.wait(0.8)
+    task.wait(1)
     bridge:FireServer({
         [1] = {
             [1] = {
@@ -671,6 +670,7 @@ local function createAndStartDungeon()
         end
     end)
 end
+
 
 --  Luồng xử lý Auto Dungeon (cho cả hai toggle)
 task.spawn(function()
