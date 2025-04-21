@@ -581,7 +581,7 @@ local function createAndStartDungeon()
         }
     }
     bridge:FireServer(unpack(args1))
-    task.wait(1)
+    task.wait(0.1)
 
     -- Tạo dungeon
     local args2 = {
@@ -635,7 +635,7 @@ if settings["AutoAddRune"] then
                         }
                     }
                     bridge:FireServer(unpack(addArgs))
-                    task.wait(0.05) -- ✅ Thêm delay giữa các AddItems để đảm bảo server nhận đầy đủ
+                    task.wait(0.1) -- ✅ Thêm delay giữa các AddItems để đảm bảo server nhận đầy đủ
                     break
                 end
             end
@@ -644,7 +644,7 @@ if settings["AutoAddRune"] then
 end
 
     -- ⏳ Bắt đầu dungeon sau 0.5s
-    task.wait(1)
+    task.wait(2)
 
     local args3 = {
         [1] = {
@@ -660,7 +660,7 @@ end
 
     -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới (spam 3 lần)
     task.spawn(function()
-        task.wait(0.5)
+        task.wait(0.4)
         local leaveArgs = {
             [1] = {
                 [1] = {
