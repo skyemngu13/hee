@@ -614,7 +614,7 @@ local function createAndStartDungeon()
                 ["DgHealthRune"] = "Heal Rune",
                 ["DgRoomRune"] = "- Room Rune",
                 ["DgTimeRune"] = "Time Rune",
-                ["DgMoreRoomRune"] = "More Room Rune",
+                ["DgMoreRoomRune"] = "More Room Rune"
             }
 
             for slot = 1, 5 do
@@ -744,23 +744,24 @@ task.spawn(function()
 end)
 
 local runeDisplayNames = {
-     ["DgBCRune"] = "Black Clover",
-     ["DgBleachRune"] = "Bleach",
-     ["DgOPRune"] = "One Piece",
-     ["DgDbRune"] = "Dragon Ball",
-     ["DgChainsawRune"] = "Chainsaw Man",
-     ["DgNarutoRune"] = "Naruto",
-     ["DgSoloRune"] = "Solo Leveling",
-     ["DgJojoRune"] = "JoJo",
-     ["DgOPMRune"] = "OPM Rune",
-     ["DgURankUpRune"] = "Ultimate Rank UP",
-     ["DgRankDownRune"] = "Rank Down Rune",
-     ["DgRankUpRune"] = "Rank Up Rune",
-     ["DgHealthRune"] = "Heal Rune",
-     ["DgRoomRune"] = "- Room Rune",
-     ["DgTimeRune"] = "Time Rune",
-     ["DgMoreRoomRune"] = "More Room Rune",
+    ["DgBCRune"] = "Black Clover",
+    ["DgBleachRune"] = "Bleach",
+    ["DgOPRune"] = "One Piece",
+    ["DgDbRune"] = "Dragon Ball",
+    ["DgChainsawRune"] = "Chainsaw Man",
+    ["DgNarutoRune"] = "Naruto",
+    ["DgSoloRune"] = "Solo Leveling",
+    ["DgJojoRune"] = "JoJo",
+    ["DgOPMRune"] = "OPM Rune",
+    ["DgURankUpRune"] = "Ultimate Rank UP",
+    ["DgRankDownRune"] = "Rank Down Rune",
+    ["DgHealthRune"] = "Heal Rune",
+    ["DgRankUpRune"] = "Rank Up Rune",
+    ["DgRoomRune"] = "- Room Rune",
+    ["DgTimeRune"] = "Time Rune",
+    ["DgMoreRoomRune"] = "More Room Rune"
 }
+
 
 local runeDropdownOptions = {"None"}
 for id, display in pairs(runeDisplayNames) do
