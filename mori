@@ -87,7 +87,7 @@ local defaultSettings = {
     SelectedCheckpoint = "25",
     BossOutFloor = 0,
     AutoAddRune = false,
-    SelectedRuneName = "OPM Rune",
+    SelectedRuneName = "Black Clover",
     AutoLeaveDungeonEnd = false,
 }
 
@@ -610,8 +610,8 @@ local function createAndStartDungeon()
                 ["DgOPMRune"] = "OPM Rune",
                 ["DgURankUpRune"] = "Ultimate Rank UP",
                 ["DgRankDownRune"] = "Rank Down Rune",
-                ["DgRankUpRune"] = "Rank Up Rune",
                 ["DgHealthRune"] = "Heal Rune",
+                ["DgRankUpRune"] = "Rank Up Rune",
                 ["DgRoomRune"] = "- Room Rune",
                 ["DgTimeRune"] = "Time Rune",
                 ["DgMoreRoomRune"] = "More Room Rune"
