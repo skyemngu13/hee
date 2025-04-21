@@ -557,7 +557,7 @@ DungeonTab:CreateToggle({
     Callback = function(val)
         settings["AutoCheckDD"] = val
         saveSettings()
-        end
+    end
 })
 
 --  Hàm tạo Dungeon
@@ -581,7 +581,7 @@ local function createAndStartDungeon()
         }
     }
     bridge:FireServer(unpack(args1))
-    task.wait(3)
+    task.wait(1)
 
     -- Tạo dungeon
     local args2 = {
@@ -596,7 +596,7 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args2))
 
     -- ⚡️ Auto Add Rune nếu bật
-    if settings["AutoAddRune"] and settings["SelectedRuneName"] then
+    if settings["AutoAddRune"] then
         task.delay(0.5, function()
             local runeDisplayNames = {
                 ["DgBCRune"] = "Black Clover",
@@ -607,39 +607,44 @@ local function createAndStartDungeon()
                 ["DgNarutoRune"] = "Naruto",
                 ["DgSoloRune"] = "Solo Leveling",
                 ["DgJojoRune"] = "JoJo",
-                ["DgURankUpRune"] = "Ultimate Rank UP",
                 ["DgOPMRune"] = "OPM Rune",
-                ["DgRankDownRune"] = "Rank Down Rune"
+                ["DgURankUpRune"] = "Ultimate Rank UP",
+                ["DgRankDownRune"] = "Rank Down Rune",
+                ["DgHealthRune"] = "Heal Rune",
+                ["DgRankUpRune"] = "Rank Up Rune",
+                ["DgRoomRune"] = "- Room Rune",
+                ["DgTimeRune"] = "Time Rune",
+                ["DgMoreRoomRune"] = "More Room Rune"
             }
 
-            local selectedRuneId
-            for id, display in pairs(runeDisplayNames) do
-                if display == settings["SelectedRuneName"] then
-                    selectedRuneId = id
-                    break
+            for slot = 1, 5 do
+                local selectedName = settings["SelectedRuneSlot" .. slot]
+                if selectedName and selectedName ~= "None" then
+                    for id, name in pairs(runeDisplayNames) do
+                        if name == selectedName then
+                            local addArgs = {
+                                [1] = {
+                                    [1] = {
+                                        ["Dungeon"] = idPlayer,
+                                        ["Action"] = "AddItems",
+                                        ["Slot"] = slot,
+                                        ["Event"] = "DungeonAction",
+                                        ["Item"] = id
+                                    },
+                                    [2] = "\n"
+                                }
+                            }
+                            bridge:FireServer(unpack(addArgs))
+                            break
+                        end
+                    end
                 end
-            end
-
-            if selectedRuneId then
-                local addArgs = {
-                    [1] = {
-                        [1] = {
-                            ["Dungeon"] = idPlayer,
-                            ["Action"] = "AddItems",
-                            ["Slot"] = 1,
-                            ["Event"] = "DungeonAction",
-                            ["Item"] = selectedRuneId
-                        },
-                        [2] = "\n"
-                    }
-                }
-                bridge:FireServer(unpack(addArgs))
             end
         end)
     end
 
     -- ⏳ Bắt đầu dungeon sau 0.5s
-    task.wait(0.5)
+    task.wait(1)
 
     local args3 = {
         [1] = {
@@ -747,12 +752,18 @@ local runeDisplayNames = {
     ["DgNarutoRune"] = "Naruto",
     ["DgSoloRune"] = "Solo Leveling",
     ["DgJojoRune"] = "JoJo",
-    ["DgURankUpRune"] = "Ultimate Rank UP",
     ["DgOPMRune"] = "OPM Rune",
-    ["DgRankDownRune"] = "Rank Down Rune"
+    ["DgURankUpRune"] = "Ultimate Rank UP",
+    ["DgRankDownRune"] = "Rank Down Rune",
+    ["DgHealthRune"] = "Heal Rune",
+    ["DgRankUpRune"] = "Rank Up Rune",
+    ["DgRoomRune"] = "- Room Rune",
+    ["DgTimeRune"] = "Time Rune",
+    ["DgMoreRoomRune"] = "More Room Rune"
 }
 
-local runeDropdownOptions = {}
+
+local runeDropdownOptions = {"None"}
 for id, display in pairs(runeDisplayNames) do
     table.insert(runeDropdownOptions, display)
 end
@@ -768,19 +779,21 @@ DungeonTab:CreateToggle({
     end
 })
 
--- 🔽 Dropdown: Select Rune
-DungeonTab:CreateDropdown({
-    Name = "Select Rune",
-    Options = runeDropdownOptions,
-    CurrentOption = {settings["SelectedRuneName"] or runeDropdownOptions[1]},
-    Flag = "SelectedRuneName",
-    MultipleOptions = false,
-    Callback = function(opt)
-        local displayName = typeof(opt) == "table" and opt[1] or opt
-        settings["SelectedRuneName"] = displayName
-        saveSettings()
-    end
-})
+-- 🔽 5 Dropdown chọn rune cho 5 slot
+for slot = 1, 5 do
+    DungeonTab:CreateDropdown({
+        Name = "Slot " .. slot .. " Rune",
+        Options = runeDropdownOptions,
+        CurrentOption = {settings["SelectedRuneSlot" .. slot] or runeDropdownOptions[1]},
+        Flag = "SelectedRuneSlot" .. slot,
+        MultipleOptions = false,
+        Callback = function(opt)
+            local displayName = typeof(opt) == "table" and opt[1] or opt
+            settings["SelectedRuneSlot" .. slot] = displayName
+            saveSettings()
+        end
+    })
+end
 
 --  Textbox: Nhập số tầng hoặc thông tin tùy ý
 DungeonTab:CreateLabel("Auto castle")
