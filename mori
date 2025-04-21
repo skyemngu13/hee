@@ -601,7 +601,6 @@ local function createAndStartDungeon()
     bridge:FireServer(unpack(args2))
 
     -- ⚡️ Auto Add Rune nếu bật
-    -- ⚡️ Auto Add Rune nếu bật
 if settings["AutoAddRune"] then
     local runeDisplayNames = {
         ["DgBCRune"] = "Black Clover",
@@ -688,7 +687,7 @@ task.spawn(function()
     local lastText = ""
     local waitFor12s = false
     local isDoubleDungeonCheck = false
-    local hasDoubleDungeonHappened = false
+    local hasCheckedDoubleDD = false -- ✅ Đánh dấu đã từng xử lý Double Dungeon
 
     while true do
         if not settings["AutoBypassDungeon"] and not settings["AutoCheckDD"] then
@@ -708,33 +707,39 @@ task.spawn(function()
                     local textLabel = dungeonInfo:FindFirstChild("TextLabel")
                     local currentText = textLabel and textLabel.Text or ""
 
-                    -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
                     if currentText == "Dungeon Ends in 20s" then
                         isDoubleDungeonCheck = true
                         waitFor12s = false
+                        hasCheckedDoubleDD = false -- Reset nếu mới vào lại Dungeon
                     end
 
-                    -- 🧠 Auto Check DD logic
-                    if settings["AutoCheckDD"] and isDoubleDungeonCheck then
+                    -- 🧠 Auto Check Double Dungeon
+                    if settings["AutoCheckDD"] and isDoubleDungeonCheck and not hasCheckedDoubleDD then
                         if currentText == "Dungeon Ends in 13s" then
                             waitFor12s = true
                         elseif waitFor12s and currentText == "Dungeon Ends in 12s" then
                             createAndStartDungeon()
                             waitFor12s = false
                             isDoubleDungeonCheck = false
-                            hasDoubleDungeonHappened = true -- đã có double dungeon
+                            hasCheckedDoubleDD = true -- ✅ Đã xử lý xong lần này
                         elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
                             waitFor12s = false
                         end
                     end
 
-                    -- 🛡️ Auto Bypass Dungeon logic
+                    -- 🛡️ Auto Bypass Dungeon
                     if settings["AutoBypassDungeon"] then
-                        -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
-                        if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
-                            if currentText:match("^Dungeon Ends in %\d+s$") and currentText ~= lastText then
+                        local isEndTimer = currentText:match("^Dungeon Ends in %d+s$")
+                        local isNewText = currentText ~= lastText
+
+                        if isEndTimer and isNewText then
+                            if hasCheckedDoubleDD then
+                                -- ✅ Nếu đã xử lý DoubleDungeon 1 lần → Gọi luôn Dungeon mới (không chờ nữa)
                                 createAndStartDungeon()
-                                hasDoubleDungeonHappened = false
+                                hasCheckedDoubleDD = false -- Reset để sẵn sàng cho lần sau
+                            elseif not settings["AutoCheckDD"] then
+                                -- Nếu không bật AutoCheckDD → cứ gọi thẳng
+                                createAndStartDungeon()
                             end
                         end
                     end
@@ -742,7 +747,6 @@ task.spawn(function()
                     lastText = currentText
                 end
             end
-
             task.wait(0.3)
         end
     end
