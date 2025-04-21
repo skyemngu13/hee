@@ -87,7 +87,7 @@ local defaultSettings = {
     SelectedCheckpoint = "25",
     BossOutFloor = 0,
     AutoAddRune = false,
-    SelectedRuneName = "Black Clover",
+    SelectedRuneName = "OPM Rune",
     AutoLeaveDungeonEnd = false,
 }
 
