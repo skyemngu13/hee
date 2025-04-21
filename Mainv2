@@ -581,7 +581,7 @@ local function createAndStartDungeon()
         }
     }
     bridge:FireServer(unpack(args1))
-    task.wait(3)
+    task.wait(2)
 
     -- Tạo dungeon
     local args2 = {
