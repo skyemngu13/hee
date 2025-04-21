@@ -254,31 +254,20 @@ task.spawn(function()
 
     -- Kiểm tra mob có nằm trong danh sách được chọn không
     local function isScaleAllowed(scale)
-    local selected = settings["FarmScales"] or {}
+        local selected = settings["FarmScales"] or {}
 
-    -- Nếu chọn "All" → luôn cho phép
-    if table.find(selected, "All") then return true end
+        if table.find(selected, "All") then return true end
+        if table.find(selected, "Đánh Boss trước") then return scale >= 1 end
 
-    -- Nếu chỉ chọn "Đánh Boss trước" → vẫn farm scale >= 1
-    if table.find(selected, "Đánh Boss trước") then
-        return scale >= 1
-    end
-
-    -- Kiểm tra bình thường
-    local roundedScale = math.floor((scale or 0) + 0.01)
-    local scaleMap = {
-        ["Normal"] = 1,
-        ["Big"] = 2
-    }
-
-    for _, name in ipairs(selected) do
-        if scaleMap[name] == roundedScale then
-            return true
+        local roundedScale = math.floor((scale or 0) + 0.01)
+        for _, name in ipairs(selected) do
+            if scaleMap[name] == roundedScale then
+                return true
+            end
         end
-    end
 
-    return false
-end
+        return false
+    end
 
     -- Tìm mob gần nhất, ưu tiên Boss nếu có "Đánh Boss trước"
     local function findNearestMob()
@@ -393,6 +382,7 @@ end
             task.wait(0.2)
         end
     end
+end)
 
 -- ⚙ Cài đặt mặc định
 local autoDestroy = settings["AutoDestroy"]
