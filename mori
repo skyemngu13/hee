@@ -557,7 +557,7 @@ DungeonTab:CreateToggle({
     Callback = function(val)
         settings["AutoCheckDD"] = val
         saveSettings()
-        end
+    end
 })
 
 --  Hàm tạo Dungeon
