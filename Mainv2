@@ -660,7 +660,7 @@ local function createAndStartDungeon()
 
     -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới (spam 3 lần)
     task.spawn(function()
-        task.wait(0.2)
+        task.wait(0.5)
         local leaveArgs = {
             [1] = {
                 [1] = {
@@ -671,9 +671,9 @@ local function createAndStartDungeon()
                 [2] = "\n"
             }
         }
-        for i = 1, 3 do
+        for i = 1, 5 do
             bridge:FireServer(unpack(leaveArgs))
-            task.wait(0.3)
+            task.wait(0.1)
         end
     end)
 end
