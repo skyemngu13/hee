@@ -566,10 +566,11 @@ local function createAndStartDungeon()
     local Players = game:GetService("Players")
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
 
+    -- 🔢 Lấy ID người chơi hiện tại
     local idPlayer = Players.LocalPlayer.UserId
 
-    -- 🎫 Mua vé
-    bridge:FireServer({
+    -- Mua vé
+    local args1 = {
         [1] = {
             [1] = {
                 ["Type"] = "Gems",
@@ -578,11 +579,12 @@ local function createAndStartDungeon()
             },
             [2] = "\n"
         }
-    })
+    }
+    bridge:FireServer(unpack(args1))
     task.wait(1)
 
-    -- 🏰 Tạo dungeon
-    bridge:FireServer({
+    -- Tạo dungeon
+    local args2 = {
         [1] = {
             [1] = {
                 ["Event"] = "DungeonAction",
@@ -590,59 +592,61 @@ local function createAndStartDungeon()
             },
             [2] = "\n"
         }
-    })
+    }
+    bridge:FireServer(unpack(args2))
 
-    -- 🧩 Auto Add Rune
-    if settings["AutoAddRune"] then
-        local runeDisplayNames = {
-            ["DgBCRune"] = "Black Clover",
-            ["DgBleachRune"] = "Bleach",
-            ["DgOPRune"] = "One Piece",
-            ["DgDbRune"] = "Dragon Ball",
-            ["DgChainsawRune"] = "Chainsaw Man",
-            ["DgNarutoRune"] = "Naruto",
-            ["DgSoloRune"] = "Solo Leveling",
-            ["DgJojoRune"] = "JoJo",
-            ["DgOPMRune"] = "OPM Rune",
-            ["DgURankUpRune"] = "Ultimate Rank UP",
-            ["DgRankDownRune"] = "Rank Down Rune",
-            ["DgHealthRune"] = "Heal Rune",
-            ["DgRankUpRune"] = "Rank Up Rune",
-            ["DgRoomRune"] = "- Room Rune",
-            ["DgTimeRune"] = "Time Rune",
-            ["DgMoreRoomRune"] = "More Room Rune"
-        }
+    -- ⚡️ Auto Add Rune nếu bật
+    -- ⚡️ Auto Add Rune nếu bật
+if settings["AutoAddRune"] then
+    local runeDisplayNames = {
+        ["DgBCRune"] = "Black Clover",
+        ["DgBleachRune"] = "Bleach",
+        ["DgOPRune"] = "One Piece",
+        ["DgDbRune"] = "Dragon Ball",
+        ["DgChainsawRune"] = "Chainsaw Man",
+        ["DgNarutoRune"] = "Naruto",
+        ["DgSoloRune"] = "Solo Leveling",
+        ["DgJojoRune"] = "JoJo",
+        ["DgOPMRune"] = "OPM Rune",
+        ["DgURankUpRune"] = "Ultimate Rank UP",
+        ["DgRankDownRune"] = "Rank Down Rune",
+        ["DgHealthRune"] = "Heal Rune",
+        ["DgRankUpRune"] = "Rank Up Rune",
+        ["DgRoomRune"] = "- Room Rune",
+        ["DgTimeRune"] = "Time Rune",
+        ["DgMoreRoomRune"] = "More Room Rune"
+    }
 
-        for slot = 1, 5 do
-            local selectedName = settings["SelectedRuneSlot" .. slot]
-            if selectedName and selectedName ~= "None" then
-                for id, name in pairs(runeDisplayNames) do
-                    if name == selectedName then
-                        task.spawn(function()
-                            bridge:FireServer({
-                                [1] = {
-                                    [1] = {
-                                        ["Dungeon"] = idPlayer,
-                                        ["Action"] = "AddItems",
-                                        ["Slot"] = slot,
-                                        ["Event"] = "DungeonAction",
-                                        ["Item"] = id
-                                    },
-                                    [2] = "\n"
-                                }
-                            })
-                        end)
-                        task.wait(0.05) -- delay ngắn để tránh overload
-                        break
-                    end
+    for slot = 1, 5 do
+        local selectedName = settings["SelectedRuneSlot" .. slot]
+        if selectedName and selectedName ~= "None" then
+            for id, name in pairs(runeDisplayNames) do
+                if name == selectedName then
+                    local addArgs = {
+                        [1] = {
+                            [1] = {
+                                ["Dungeon"] = idPlayer,
+                                ["Action"] = "AddItems",
+                                ["Slot"] = slot,
+                                ["Event"] = "DungeonAction",
+                                ["Item"] = id
+                            },
+                            [2] = "\n"
+                        }
+                    }
+                    bridge:FireServer(unpack(addArgs))
+                    task.wait(0.05) -- ✅ Thêm delay giữa các AddItems để đảm bảo server nhận đầy đủ
+                    break
                 end
             end
         end
     end
+end
 
-    -- ▶️ Bắt đầu dungeon sau delay vừa đủ
-    task.wait(1.2)
-    bridge:FireServer({
+    -- ⏳ Bắt đầu dungeon sau 0.5s
+    task.wait(1)
+
+    local args3 = {
         [1] = {
             [1] = {
                 ["Dungeon"] = idPlayer,
@@ -651,9 +655,10 @@ local function createAndStartDungeon()
             },
             [2] = "\n"
         }
-    })
+    }
+    bridge:FireServer(unpack(args3))
 
-    -- ⛔ Rời dungeon ngay sau khi bắt đầu (spam 3 lần)
+    -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới (spam 3 lần)
     task.spawn(function()
         task.wait(0.5)
         local leaveArgs = {
