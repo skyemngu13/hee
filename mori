@@ -88,6 +88,7 @@ local defaultSettings = {
     BossOutFloor = 0,
     AutoAddRune = false,
     SelectedRuneName = "Black Clover",
+    AutoLeaveDungeonEnd = false,
 }
 
 for key, value in pairs(defaultSettings) do
@@ -501,8 +502,43 @@ end)
 
 DungeonTab:CreateLabel("Auto farm Dungeon")
 
+DungeonTab:CreateToggle({
+    Name = "Auto out dungeon",
+    CurrentValue = settings["AutoLeaveDungeonEnd"],
+    Flag = "AutoLeaveDungeonEnd",
+    Callback = function(val)
+        settings["AutoLeaveDungeonEnd"] = val
+        saveSettings()
+    end
+})
+
+local TeleportService = game:GetService("TeleportService")
+local lobbyPlaceId = 87039211657390
+
+task.spawn(function()
+    while true do
+        -- Chỉ chạy nếu bật AutoLeaveDungeonEnd và không phải ở lobby
+        if settings["AutoLeaveDungeonEnd"] and game.PlaceId ~= lobbyPlaceId then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local gui = player:FindFirstChild("PlayerGui")
+                local hud = gui and gui:FindFirstChild("Hud")
+                local upContainer = hud and hud:FindFirstChild("UpContanier")
+                local dungeonInfo = upContainer and upContainer:FindFirstChild("DungeonInfo")
+
+                if dungeonInfo and dungeonInfo:FindFirstChild("TextLabel") then
+                    local text = dungeonInfo.TextLabel.Text
+                    if string.match(text, "^Dungeon Ends in %d+s$") then
+                        TeleportService:Teleport(lobbyPlaceId)
+                    end
+                end
+            end)
+        end
+        task.wait(2)
+    end
+end)
+
 -- 🛡Auto Bypass Dungeon Toggle 
--- ✅ Toggle: Auto Bypass Dungeon
 DungeonTab:CreateToggle({
     Name = "Auto Bypass Dungeon",
     CurrentValue = settings["AutoBypassDungeon"],
@@ -513,7 +549,7 @@ DungeonTab:CreateToggle({
     end
 })
 
--- ✅ Toggle: Auto Check DD (fix)
+-- uto Check DD Toggle (ở dưới)
 DungeonTab:CreateToggle({
     Name = "Auto Check DD (fix)",
     CurrentValue = settings["AutoCheckDD"],
@@ -521,75 +557,115 @@ DungeonTab:CreateToggle({
     Callback = function(val)
         settings["AutoCheckDD"] = val
         saveSettings()
-    end
+        end
 })
 
--- ✅ Toggle: Auto Join Dungeon (Out)
-DungeonTab:CreateToggle({
-    Name = "Auto Join Dungeon (Out)",
-    CurrentValue = settings["AutoJoinOut"],
-    Flag = "AutoJoinOut",
-    Callback = function(val)
-        settings["AutoJoinOut"] = val
-        saveSettings()
-    end
-})
-
--- ✅ Function: Create & Start Dungeon
+--  Hàm tạo Dungeon
 local function createAndStartDungeon()
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local Players = game:GetService("Players")
     local bridge = ReplicatedStorage:WaitForChild("BridgeNet2"):WaitForChild("dataRemoteEvent")
+
+    -- 🔢 Lấy ID người chơi hiện tại
     local idPlayer = Players.LocalPlayer.UserId
 
     -- Mua vé
-    bridge:FireServer({{
-        {Type = "Gems", Event = "DungeonAction", Action = "BuyTicket"}, "\n"
-    }})
-    task.wait(1)
+    local args1 = {
+        [1] = {
+            [1] = {
+                ["Type"] = "Gems",
+                ["Event"] = "DungeonAction",
+                ["Action"] = "BuyTicket"
+            },
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args1))
+    task.wait(3)
 
     -- Tạo dungeon
-    bridge:FireServer({{
-        {Event = "DungeonAction", Action = "Create"}, "\n"
-    }})
+    local args2 = {
+        [1] = {
+            [1] = {
+                ["Event"] = "DungeonAction",
+                ["Action"] = "Create"
+            },
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args2))
 
-    -- Auto Add Rune
+    -- ⚡️ Auto Add Rune nếu bật
     if settings["AutoAddRune"] and settings["SelectedRuneName"] then
         task.delay(0.5, function()
-            local runeMap = {
-                ["Black Clover"] = "DgBCRune",
-                ["Bleach"] = "DgBleachRune",
-                ["One Piece"] = "DgOPRune",
-                ["Dragon Ball"] = "DgDbRune",
-                ["Chainsaw Man"] = "DgChainsawRune",
-                ["Naruto"] = "DgNarutoRune",
-                ["Solo Leveling"] = "DgSoloRune",
-                ["JoJo"] = "DgJojoRune",
-                ["Ultimate Rank UP"] = "DgURankUpRune",
-                ["OPM Rune"] = "DgOPMRune",
-                ["Rank Down Rune"] = "DgRankDownRune"
+            local runeDisplayNames = {
+                ["DgBCRune"] = "Black Clover",
+                ["DgBleachRune"] = "Bleach",
+                ["DgOPRune"] = "One Piece",
+                ["DgDbRune"] = "Dragon Ball",
+                ["DgChainsawRune"] = "Chainsaw Man",
+                ["DgNarutoRune"] = "Naruto",
+                ["DgSoloRune"] = "Solo Leveling",
+                ["DgJojoRune"] = "JoJo",
+                ["DgURankUpRune"] = "Ultimate Rank UP",
+                ["DgOPMRune"] = "OPM Rune",
+                ["DgRankDownRune"] = "Rank Down Rune"
             }
-            local selectedRuneId = runeMap[settings["SelectedRuneName"]]
+
+            local selectedRuneId
+            for id, display in pairs(runeDisplayNames) do
+                if display == settings["SelectedRuneName"] then
+                    selectedRuneId = id
+                    break
+                end
+            end
+
             if selectedRuneId then
-                bridge:FireServer({{
-                    {Dungeon = idPlayer, Action = "AddItems", Slot = 1, Event = "DungeonAction", Item = selectedRuneId}, "\n"
-                }})
+                local addArgs = {
+                    [1] = {
+                        [1] = {
+                            ["Dungeon"] = idPlayer,
+                            ["Action"] = "AddItems",
+                            ["Slot"] = 1,
+                            ["Event"] = "DungeonAction",
+                            ["Item"] = selectedRuneId
+                        },
+                        [2] = "\n"
+                    }
+                }
+                bridge:FireServer(unpack(addArgs))
             end
         end)
     end
 
-    -- Bắt đầu dungeon
+    -- ⏳ Bắt đầu dungeon sau 0.5s
     task.wait(0.5)
-    bridge:FireServer({{
-        {Dungeon = idPlayer, Event = "DungeonAction", Action = "Start"}, "\n"
-    }})
 
-    -- Rời dungeon cũ (spam 3 lần)
+    local args3 = {
+        [1] = {
+            [1] = {
+                ["Dungeon"] = idPlayer,
+                ["Event"] = "DungeonAction",
+                ["Action"] = "Start"
+            },
+            [2] = "\n"
+        }
+    }
+    bridge:FireServer(unpack(args3))
+
+    -- 🛑 Rời dungeon cũ sau khi bắt đầu dungeon mới (spam 3 lần)
     task.spawn(function()
-        task.wait(0.5)
-        local leaveArgs = {{
-            {Dungeon = idPlayer, Event = "DungeonAction", Action = "Leave"}, "\n"
-        }}
+        task.wait(0.2)
+        local leaveArgs = {
+            [1] = {
+                [1] = {
+                    ["Dungeon"] = idPlayer,
+                    ["Event"] = "DungeonAction",
+                    ["Action"] = "Leave"
+                },
+                [2] = "\n"
+            }
+        }
         for i = 1, 3 do
             bridge:FireServer(unpack(leaveArgs))
             task.wait(0.3)
@@ -597,10 +673,7 @@ local function createAndStartDungeon()
     end)
 end
 
--- ✅ Auto Dungeon handler
-local TeleportService = game:GetService("TeleportService")
-local lobbyPlaceId = 87039211657390
-
+--  Luồng xử lý Auto Dungeon (cho cả hai toggle)
 task.spawn(function()
     local lastText = ""
     local waitFor12s = false
@@ -608,17 +681,16 @@ task.spawn(function()
     local hasDoubleDungeonHappened = false
 
     while true do
-        if not settings["AutoBypassDungeon"] and not settings["AutoCheckDD"] and not settings["AutoJoinOut"] then
+        if not settings["AutoBypassDungeon"] and not settings["AutoCheckDD"] then
             task.wait(1)
         else
-            local player = game.Players.LocalPlayer
-            local placeId = game.PlaceId
-
-            if placeId == lobbyPlaceId then
+            if game.PlaceId == 87039211657390 then
                 if settings["AutoBypassDungeon"] then
+                    task.wait(1)
                     createAndStartDungeon()
                 end
             else
+                local player = game.Players.LocalPlayer
                 local infoGui = player:WaitForChild("PlayerGui"):WaitForChild("Hud"):FindFirstChild("UpContanier")
                 local dungeonInfo = infoGui and infoGui:FindFirstChild("DungeonInfo")
 
@@ -626,18 +698,13 @@ task.spawn(function()
                     local textLabel = dungeonInfo:FindFirstChild("TextLabel")
                     local currentText = textLabel and textLabel.Text or ""
 
-                    -- ⚠️ Nếu bật AutoJoinOut thì out về lobby ngay khi thấy "Dungeon Ends in xxs"
-                    if settings["AutoJoinOut"] and currentText:match("^Dungeon Ends in %d+s$") then
-                        TeleportService:Teleport(lobbyPlaceId)
-                        task.wait(3)
-                        continue
-                    end
-
+                    -- 📌 Khi thấy Dungeon Ends in 20s → bắt đầu kiểm tra double dungeon
                     if currentText == "Dungeon Ends in 20s" then
                         isDoubleDungeonCheck = true
                         waitFor12s = false
                     end
 
+                    -- 🧠 Auto Check DD logic
                     if settings["AutoCheckDD"] and isDoubleDungeonCheck then
                         if currentText == "Dungeon Ends in 13s" then
                             waitFor12s = true
@@ -645,23 +712,27 @@ task.spawn(function()
                             createAndStartDungeon()
                             waitFor12s = false
                             isDoubleDungeonCheck = false
-                            hasDoubleDungeonHappened = true
-                        elseif not currentText:match("Dungeon Ends in 1[23]s") then
+                            hasDoubleDungeonHappened = true -- đã có double dungeon
+                        elseif currentText ~= "Dungeon Ends in 13s" and currentText ~= "Dungeon Ends in 12s" then
                             waitFor12s = false
                         end
                     end
 
+                    -- 🛡️ Auto Bypass Dungeon logic
                     if settings["AutoBypassDungeon"] then
+                        -- 2. Hoặc AutoCheckDD nhưng KHÔNG có double dungeon (hoặc đã qua 1 lần kiểm tra rồi)
                         if (not settings["AutoCheckDD"]) or (settings["AutoCheckDD"] and not isDoubleDungeonCheck and not waitFor12s) then
-                            if currentText:match("^Dungeon Ends in %d+s$") and currentText ~= lastText then
+                            if currentText:match("^Dungeon Ends in %\d+s$") and currentText ~= lastText then
                                 createAndStartDungeon()
                                 hasDoubleDungeonHappened = false
                             end
                         end
                     end
+
                     lastText = currentText
                 end
             end
+
             task.wait(0.3)
         end
     end
