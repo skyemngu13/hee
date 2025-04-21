@@ -89,6 +89,7 @@ local defaultSettings = {
     AutoAddRune = false,
     SelectedRuneName = "Black Clover",
     AutoLeaveDungeonEnd = false,
+    OnlyDungeon = false,
 }
 
 for key, value in pairs(defaultSettings) do
@@ -174,7 +175,7 @@ task.spawn(function()
                 end)
             end
         end
-        task.wait(0.05)
+        task.wait(0.1)
     end
 end)
 
@@ -187,6 +188,16 @@ MainTab:CreateToggle({
     Flag = "AutoFarm",
     Callback = function(val)
         settings["AutoFarm"] = val
+        saveSettings()
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "Only Dungeon/Castle",
+    CurrentValue = settings["OnlyDungeon"],
+    Flag = "OnlyDungeon",
+    Callback = function(val)
+        settings["OnlyDungeon"] = val
         saveSettings()
     end
 })
@@ -365,8 +376,13 @@ end
     end
 
     -- Vòng lặp chính
+    local LOBBY_PLACE_ID = 87039211657390
+
     while true do
-        if settings["AutoFarm"] then
+        local isInLobby = game.PlaceId == LOBBY_PLACE_ID
+        local onlyDungeon = settings["OnlyDungeon"]
+
+        if settings["AutoFarm"] and (not onlyDungeon or not isInLobby) then
             local model, part = findNearestMob()
             if part then
                 handleMob(model, part)
@@ -377,9 +393,8 @@ end
             task.wait(0.2)
         end
     end
-end)
--- ⚙ Cài đặt mặc định
 
+-- ⚙ Cài đặt mặc định
 local autoDestroy = settings["AutoDestroy"]
 local selectedModels = settings["AriseModels"]
 
