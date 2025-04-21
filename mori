@@ -614,7 +614,7 @@ local function createAndStartDungeon()
                 ["DgHealthRune"] = "Heal Rune",
                 ["DgRoomRune"] = "- Room Rune",
                 ["DgTimeRune"] = "Time Rune",
-                ["DgMoreRoomRune"] = "More Room Rune"
+                ["DgMoreRoomRune"] = "More Room Rune",
             }
 
             for slot = 1, 5 do
@@ -759,7 +759,7 @@ local runeDisplayNames = {
      ["DgHealthRune"] = "Heal Rune",
      ["DgRoomRune"] = "- Room Rune",
      ["DgTimeRune"] = "Time Rune",
-     ["DgMoreRoomRune"] = "More Room Rune"
+     ["DgMoreRoomRune"] = "More Room Rune",
 }
 
 local runeDropdownOptions = {"None"}
